@@ -1,0 +1,45 @@
+{
+  "brand": "Web3 购物中心",
+  "cta": "立即体验 dCommerce",
+  "heroTitle": "一站式 Web3 购物体验",
+  "heroDescription": "结合 React、Tailwind、Ant Design、wagmi 与完整 i18n，快速搭建去中心化商城。",
+  "language": "语言",
+  "languageOptions": {
+    "en": "英文",
+    "zh": "中文"
+  },
+  "wallet": {
+    "connect": "连接钱包",
+    "disconnect": "断开连接",
+    "connected": "已连接钱包",
+    "disconnected": "尚未连接钱包",
+    "status": "状态",
+    "selectConnector": "选择钱包",
+    "pending": "正在授权 {{connector}}...",
+    "unsupported": "暂不支持的钱包"
+  },
+  "network": {
+    "title": "当前链",
+    "unsupported": "不受支持的网络"
+  },
+  "productsTitle": "精选上新",
+  "products": {
+    "nftSneaker": "幻影球鞋 NFT",
+    "nftSneakerDesc": "可兑换实体球鞋，链上来源可追溯。",
+    "metaverseSuite": "街机阁楼套装",
+    "metaverseSuiteDesc": "可自定义的虚拟门店，支持动态库存。",
+    "loyaltyPass": "忠诚度通行证",
+    "loyaltyPassDesc": "阶梯权益的 token 门禁社区。"
+  },
+  "product": {
+    "price": "{{value}} 代币",
+    "buy": "立即购买"
+  },
+  "badges": {
+    "nft": "NFT 限定",
+    "metaverse": "元宇宙",
+    "loyalty": "会员"
+  },
+  "footer": "基于 React、wagmi、Tailwind CSS 与 Ant Design 打造。"
+}
+

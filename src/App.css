@@ -1,0 +1,7 @@
+:where(.ant-layout) {
+  background: transparent;
+}
+
+:where(.ant-card) {
+  border-radius: 1rem;
+}

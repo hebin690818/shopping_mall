@@ -1,0 +1,45 @@
+{
+  "brand": "Web3 Shopping Mall",
+  "cta": "Enter dCommerce",
+  "heroTitle": "One-stop Web3 shopping experience",
+  "heroDescription": "Launch your decentralized commerce storefront with React, Tailwind, Ant Design, wagmi, and full i18n support.",
+  "language": "Language",
+  "languageOptions": {
+    "en": "English",
+    "zh": "中文"
+  },
+  "wallet": {
+    "connect": "Connect Wallet",
+    "disconnect": "Disconnect",
+    "connected": "Connected wallet",
+    "disconnected": "Wallet not connected",
+    "status": "Status",
+    "selectConnector": "Choose a wallet provider",
+    "pending": "Authorizing {{connector}}...",
+    "unsupported": "Unsupported wallet"
+  },
+  "network": {
+    "title": "Active chain",
+    "unsupported": "Unsupported network"
+  },
+  "productsTitle": "Featured drops",
+  "products": {
+    "nftSneaker": "Phantom Kicks NFT",
+    "nftSneakerDesc": "Redeemable sneakers linked to on-chain provenance.",
+    "metaverseSuite": "Arcade Loft Suite",
+    "metaverseSuiteDesc": "Customize a virtual storefront with dynamic inventory.",
+    "loyaltyPass": "Loyalty Access Pass",
+    "loyaltyPassDesc": "Token-gated community with tiered benefits."
+  },
+  "product": {
+    "price": "{{value}} TOK",
+    "buy": "Buy now"
+  },
+  "badges": {
+    "nft": "NFT Drop",
+    "metaverse": "Metaverse",
+    "loyalty": "Membership"
+  },
+  "footer": "Built with React, wagmi, Tailwind CSS and Ant Design."
+}
+
