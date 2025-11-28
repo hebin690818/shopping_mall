@@ -7,6 +7,7 @@ import { I18nextProvider } from 'react-i18next'
 import App from './App.tsx'
 import { wagmiConfig } from './lib/wagmi'
 import i18n from './i18n/config'
+import { LoadingProvider } from './contexts/LoadingProvider'
 import './index.css'
 import 'antd/dist/reset.css'
 
@@ -26,7 +27,9 @@ createRoot(document.getElementById('root')!).render(
             }}
           >
             <AntdApp>
-              <App />
+              <LoadingProvider>
+                <App />
+              </LoadingProvider>
             </AntdApp>
           </ConfigProvider>
         </I18nextProvider>

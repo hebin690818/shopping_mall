@@ -40,6 +40,69 @@
     "metaverse": "元宇宙",
     "loyalty": "会员"
   },
-  "footer": "基于 React、wagmi、Tailwind CSS 与 Ant Design 打造。"
+  "footer": "基于 React、wagmi、Tailwind CSS 与 Ant Design 打造。",
+  "orders": {
+    "title": "我的订单",
+    "total": "共{{count}}个订单",
+    "tabs": {
+      "all": "全部订单",
+      "pending": "待付款",
+      "delivering": "配送中",
+      "completed": "已完成"
+    },
+    "orderNumber": "订单号",
+    "totalPrice": "总计",
+    "viewDetails": "查看详情",
+    "viewLogistics": "查看物流",
+    "confirmReceipt": "确认收货",
+    "status": {
+      "pending": "待付款",
+      "delivering": "配送中",
+      "completed": "已完成"
+    }
+  },
+  "navigation": {
+    "home": "首页",
+    "merchant": "商家",
+    "orders": "订单",
+    "profile": "我的"
+  },
+  "profile": {
+    "title": "个人中心",
+    "user": {
+      "defaultName": "用户12345"
+    },
+    "assets": {
+      "title": "我的资产",
+      "balance": "{{value}} USDT",
+      "consumptionPower": "消费力",
+      "tokenHoldings": "代币持仓",
+      "note": "订单确认收货后: 80%U直接进钱包, 20%转为消费算力"
+    },
+    "dividend": {
+      "title": "分红中心",
+      "available": "当前可领取",
+      "claim": "领取分红",
+      "note": "领取后将按规则分配"
+    },
+    "links": {
+      "orders": "订单入口",
+      "merchant": "商家中心",
+      "settings": "设置"
+    },
+    "copy": "复制"
+  },
+  "home": {
+    "searchPlaceholder": "搜索商品...",
+    "categories": {
+      "title": "商品分类",
+      "viewAll": "查看全部"
+    },
+    "products": {
+      "title": "精选商品",
+      "viewAll": "查看全部",
+      "buyNow": "立即购买"
+    }
+  }
 }
 

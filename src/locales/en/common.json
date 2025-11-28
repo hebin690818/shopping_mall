@@ -40,6 +40,69 @@
     "metaverse": "Metaverse",
     "loyalty": "Membership"
   },
-  "footer": "Built with React, wagmi, Tailwind CSS and Ant Design."
+  "footer": "Built with React, wagmi, Tailwind CSS and Ant Design.",
+  "orders": {
+    "title": "My Orders",
+    "total": "Total {{count}} orders",
+    "tabs": {
+      "all": "All Orders",
+      "pending": "Pending Payment",
+      "delivering": "In Delivery",
+      "completed": "Completed"
+    },
+    "orderNumber": "Order No",
+    "totalPrice": "Total",
+    "viewDetails": "View Details",
+    "viewLogistics": "View Logistics",
+    "confirmReceipt": "Confirm Receipt",
+    "status": {
+      "pending": "Pending Payment",
+      "delivering": "In Delivery",
+      "completed": "Completed"
+    }
+  },
+  "navigation": {
+    "home": "Home",
+    "merchant": "Merchant",
+    "orders": "Orders",
+    "profile": "Profile"
+  },
+  "profile": {
+    "title": "Personal Center",
+    "user": {
+      "defaultName": "User12345"
+    },
+    "assets": {
+      "title": "My Assets",
+      "balance": "{{value}} USDT",
+      "consumptionPower": "Consumption Power",
+      "tokenHoldings": "Token Holdings",
+      "note": "After order confirmation: 80%U directly into wallet, 20% converted to consumption power"
+    },
+    "dividend": {
+      "title": "Dividend Center",
+      "available": "Currently available for claim",
+      "claim": "Claim Dividend",
+      "note": "After claiming, it will be distributed according to rules"
+    },
+    "links": {
+      "orders": "Order Entry",
+      "merchant": "Merchant Center",
+      "settings": "Settings"
+    },
+    "copy": "Copy"
+  },
+  "home": {
+    "searchPlaceholder": "Search products...",
+    "categories": {
+      "title": "Product Categories",
+      "viewAll": "View All"
+    },
+    "products": {
+      "title": "Featured Products",
+      "viewAll": "View All",
+      "buyNow": "Buy Now"
+    }
+  }
 }
 
