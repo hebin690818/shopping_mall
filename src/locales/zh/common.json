@@ -103,6 +103,162 @@
       "viewAll": "查看全部",
       "buyNow": "立即购买"
     }
+  },
+  "common": {
+    "save": "保存",
+    "back": "返回"
+  },
+  "globalLoading": {
+    "defaultMessage": "正在加载...",
+    "pleaseWait": "请稍候"
+  },
+  "settings": {
+    "title": "设置",
+    "basicInfo": "基本信息",
+    "shippingAddress": "收货地址",
+    "shippingAddressDesc": "这里是收获地址,占位符,占位符,占位符,占位符,占位符,占位符,占位符,占位符.",
+    "walletAddress": "地址",
+    "language": "语言",
+    "langZh": "中文",
+    "langEn": "EN",
+    "storeInfo": "店铺信息",
+    "storeName": "店铺名称",
+    "storeNamePlaceholder": "这里是店铺名称",
+    "storeIntro": "店铺简介",
+    "storeIntroPlaceholder": "这里是店铺简介,占位符占位符占位符占位符占位符占位符占位符占位符占位符占位符占位符"
+  },
+  "addressEdit": {
+    "title": "收获地址",
+    "address": "地址",
+    "addressPlaceholder": "这里是收获地址,占位符,占位符,占位符,占位符,占位符,占位符,占位符,占位符.",
+    "receiver": "收件人",
+    "receiverPlaceholder": "这里是收件人",
+    "phone": "联系电话",
+    "phonePlaceholder": "123-1122-3344"
+  },
+  "merchantPage": {
+    "title": "商家",
+    "applyTitle": "申请成为商家",
+    "applySubtitle": "开启您的商业之旅，触达千万用户",
+    "applyTip": "销毁 100U 的质押币，即可开店",
+    "applyCta": "立即申请 →",
+    "newMerchants": "新入驻商家",
+    "visitStore": "进店逛逛"
+  },
+  "merchantCenter": {
+    "title": "商家中心",
+    "tabs": {
+      "all": "全部",
+      "on": "已上架",
+      "off": "已下架"
+    },
+    "stock": "库存:{{count}}",
+    "statusOn": "上架中",
+    "statusOff": "已下架",
+    "edit": "编辑",
+    "actionOn": "上架",
+    "actionOff": "下架"
+  },
+  "merchantEdit": {
+    "title": "编辑商品",
+    "basicInfo": "基本信息",
+    "name": "商品名称",
+    "namePlaceholder": "输入商品名称..",
+    "description": "商品描述",
+    "descriptionPlaceholder": "输入商品描述文案..",
+    "images": "商品图片",
+    "priceInfo": "价格信息",
+    "price": "价格",
+    "priceRequired": "请输入价格",
+    "pricePlaceholder": "如16.00",
+    "priceUnit": "元"
+  },
+  "merchantApply": {
+    "title": "申请成为商家",
+    "nameLabel": "店铺名称",
+    "nameRequired": "请输入您的店铺名称",
+    "namePlaceholder": "请输入您的店铺名称",
+    "descLabel": "店铺描述",
+    "descPlaceholder": "请输入您的店铺描述",
+    "submit": "申请商家",
+    "tip": "提交后将进入审核流程，预计1-3个工作日完成"
+  },
+  "merchantApplyResult": {
+    "title": "申请成为商家",
+    "success": "申请成功",
+    "fail": "申请失败",
+    "back": "返回",
+    "uploadProduct": "上传商品",
+    "retry": "重新申请"
+  },
+  "ordersCenter": {
+    "title": "我的订单",
+    "total": "共{{count}}个订单",
+    "tabs": {
+      "all": "全部",
+      "allOrders": "全部订单",
+      "pending": "待付款",
+      "delivering": "配送中",
+      "completed": "已完成",
+      "unfinished": "未完成"
+    },
+    "orderNo": "订单号: {{no}}",
+    "totalPrice": "总计: ¥{{amount}}",
+    "viewDetails": "查看详情",
+    "viewLogistics": "查看物流",
+    "confirmReceipt": "确认收货",
+    "cancelOrder": "取消订单",
+    "payNow": "立即付款",
+    "uploadLogisticsTitle": "上传快递运单号",
+    "waybillPlaceholder": "请在这里输入运单号",
+    "companyPlaceholder": "请在这里输入快递公司",
+    "upload": "上传",
+    "statusCompleted": "已完成",
+    "statusUnfinished": "未完成"
+  },
+  "orderDetail": {
+    "title": "订单详情",
+    "orderNo": "订单号: {{no}}",
+    "shipping": "配送中",
+    "amount": "付款金额",
+    "logisticsCompany": "物流公司",
+    "logisticsNo": "物流单号",
+    "shipTime": "发货时间",
+    "payTime": "付款时间"
+  },
+  "checkout": {
+    "title": "确认订单",
+    "shippingAddress": "收货地址",
+    "orderDetail": "订单详情",
+    "presale": "预售15天内发货",
+    "quantity": "购买数量",
+    "payMethod": "支付方式",
+    "usdtPay": "USDT支付",
+    "usdtDesc": "稳定币支付，实时结算",
+    "totalLabel": "合计",
+    "payNow": "立即支付"
+  },
+  "paymentSuccess": {
+    "title": "支付成功",
+    "processing": "订单正在处理中，稍后可在订单页查看详细物流信息。",
+    "continue": "继续逛逛",
+    "viewOrders": "查看订单",
+    "guessYouLike": "猜你喜欢",
+    "buyNow": "立即购买"
+  },
+  "productDetail": {
+    "title": "商品详情",
+    "placeholderDesc": "占位符占位符占位符占位符占位符占位符占位符占位符",
+    "stock": "库存: {{count}}件",
+    "introTitle": "商品介绍",
+    "intro1": "这是一款精心设计的高品质商品，采用优质材料制作，具有出色的性能和质感。无论是日常使用还是专业需求，都能带来理想体验。",
+    "intro2": "我们的产品经过严格的品质检测，确保每一件商品都达到高标准。购买即享受完善的售后服务和保障。",
+    "deliveryTitle": "配送信息",
+    "deliveryFree": "免费配送",
+    "deliveryTime": "预计 2~3 个工作日送达",
+    "deliveryFast": "支持极速发货",
+    "buyNow": "立即购买",
+    "connectWallet": "链接钱包"
   }
 }
 

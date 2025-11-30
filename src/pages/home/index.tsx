@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Input, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { SearchOutlined } from "@ant-design/icons";
+import { useAccount, useConnect } from "wagmi";
 
 const { Text } = Typography;
 
@@ -56,11 +57,14 @@ const generateProducts = (page: number, pageSize: number = 10): Product[] => {
 
 export default function HomePage({ onSelectProduct }: HomePageProps) {
   const { t } = useTranslation("common");
+  const { isConnected, address } = useAccount();
+  const { connect, connectors, status } = useConnect();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
@@ -220,154 +224,220 @@ export default function HomePage({ onSelectProduct }: HomePageProps) {
     };
   }, [hasMore, loading, loadMoreProducts]);
 
+  // 监听滚动，为固定头部添加背景色
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 10);
+    };
+
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <div className="min-h-screen bg-slate-50 pb-20 overflow-x-hidden">
-      {/* Header with Logo and Search */}
-      <div className="bg-gradient-to-r from-blue-100 to-purple-100 px-4 pt-12 pb-4">
-        <div className="flex items-center gap-3 mb-3">
+    <div
+      className="min-h-screen pb-20 overflow-x-hidden"
+      style={{
+        backgroundImage: "url(/bg.svg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
+      }}
+    >
+      {/* Fixed Logo Header */}
+      <div
+        className="fixed top-0 left-0 right-0 z-50 p-4 transition-all duration-300"
+        style={{
+          background: isScrolled ? "rgba(200, 223, 247, 0.8)" : "transparent",
+          backdropFilter: isScrolled ? "blur(10px)" : "none",
+        }}
+      >
+        <div className="flex items-center justify-between gap-3">
           <div className="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center text-white text-xs font-bold">
             LOGO
           </div>
-        </div>
-        <Input
-          size="large"
-          placeholder={t("home.searchPlaceholder")}
-          prefix={<SearchOutlined className="text-slate-400" />}
-          className="!rounded-full"
-        />
-      </div>
-
-      {/* Banner Carousel */}
-      <div className="px-4 py-4">
-        <div
-          ref={bannerRef}
-          className="relative overflow-hidden"
-          style={{ height: "200px", width: "100%" }}
-        >
-          <div
-            className="flex"
-            style={{
-              transform: `translateX(calc(-${currentBanner * 85}% + ${
-                currentBanner * 16
-              }px + ${offset}px))`,
-              gap: "16px",
-              transition: isDragging ? "none" : "transform 0.5s ease-in-out",
-              cursor: isDragging ? "grabbing" : "grab",
-              userSelect: "none",
+          <button
+            onClick={() => {
+              if (!isConnected && connectors.length > 0) {
+                connect({ connector: connectors[0] });
+              }
             }}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
+            disabled={status === "pending" || (!isConnected && connectors.length === 0)}
+            className={`
+              relative flex items-center gap-2 px-4 py-2 rounded-full
+              font-medium text-sm transition-all duration-300
+              ${
+                isConnected
+                  ? "bg-gradient-to-r from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/30 hover:shadow-xl hover:shadow-emerald-500/40 hover:scale-105 active:scale-95"
+                  : "bg-gradient-to-r from-slate-800 to-slate-900 text-white shadow-lg shadow-slate-900/30 hover:shadow-xl hover:shadow-slate-900/40 hover:scale-105 active:scale-95"
+              }
+              disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 disabled:active:scale-100
+              disabled:shadow-lg
+            `}
           >
-            {banners.map((banner, index) => (
-              <div
-                key={index}
-                className="flex-shrink-0 rounded-xl overflow-hidden"
-                style={{
-                  width: "85%",
-                  height: "200px",
-                  pointerEvents: "none",
-                }}
-              >
-                <img
-                  src={banner}
-                  alt={`Banner ${index + 1}`}
-                  className="w-full h-full object-cover"
-                  draggable={false}
-                />
-              </div>
-            ))}
-          </div>
+            {status === "pending" && (
+              <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            )}
+            {isConnected && status !== "pending" && (
+              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            )}
+            <span className="whitespace-nowrap">
+              {isConnected
+                ? address
+                  ? `${address.slice(0, 6)}...${address.slice(-4)}`
+                  : t("wallet.connected")
+                : t("wallet.connect")}
+            </span>
+          </button>
         </div>
       </div>
 
-      {/* Categories Section */}
-      <div className="px-4 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <Text className="text-base font-bold">
-            {t("home.categories.title")}
-          </Text>
-          <Text className="text-sm text-slate-500 cursor-pointer">
-            {t("home.categories.viewAll")}
-          </Text>
+      {/* Content with padding-top to avoid logo overlap */}
+      <div className="pt-[72px]">
+        {/* Search Section - Scrollable */}
+        <div className="px-4 pb-3" style={{ background: "transparent" }}>
+          <Input
+            size="large"
+            placeholder={t("home.searchPlaceholder")}
+            prefix={<SearchOutlined className="text-slate-400" />}
+            className="!rounded-full"
+          />
         </div>
-        <div className="overflow-x-auto -mx-4 px-4">
-          <div className="flex gap-3" style={{ width: "max-content" }}>
-            {categories.map((category) => (
-              <div key={category.id} className="flex-shrink-0 text-center">
-                <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden">
-                  <img
-                    src={category.image}
-                    alt={category.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <Text className="text-xs text-slate-700">{category.name}</Text>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Products Section */}
-      <div className="px-4 py-4">
-        <div className="flex items-center justify-between mb-3">
-          <Text className="text-base font-bold">
-            {t("home.products.title")}
-          </Text>
-          <Text className="text-sm text-slate-500 cursor-pointer">
-            {t("home.products.viewAll")}
-          </Text>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          {products.map((product) => (
+        {/* Banner Carousel */}
+        <div className="px-4 py-4">
+          <div
+            ref={bannerRef}
+            className="relative overflow-hidden"
+            style={{ height: "200px", width: "100%" }}
+          >
             <div
-              key={product.id}
-              className="!rounded-xl shadow-sm overflow-hidden cursor-pointer"
-              onClick={() => onSelectProduct?.(product)}
+              className="flex"
+              style={{
+                transform: `translateX(calc(-${currentBanner * 85}% + ${
+                  currentBanner * 16
+                }px + ${offset}px))`,
+                gap: "16px",
+                transition: isDragging ? "none" : "transform 0.5s ease-in-out",
+                cursor: isDragging ? "grabbing" : "grab",
+                userSelect: "none",
+              }}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
             >
-              <div>
-                <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
+              {banners.map((banner, index) => (
+                <div
+                  key={index}
+                  className="flex-shrink-0 rounded-xl overflow-hidden"
+                  style={{
+                    width: "85%",
+                    height: "200px",
+                    pointerEvents: "none",
+                  }}
+                >
                   <img
-                    src={product.image}
-                    alt={product.name}
+                    src={banner}
+                    alt={`Banner ${index + 1}`}
                     className="w-full h-full object-cover"
+                    draggable={false}
                   />
                 </div>
-                <div className="p-3">
-                  <Text className="text-sm font-medium block line-clamp-2 min-h-[2.5rem]">
-                    {product.name}
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Categories Section */}
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <Text className="text-base font-bold">
+              {t("home.categories.title")}
+            </Text>
+            <Text className="text-sm text-slate-500 cursor-pointer">
+              {t("home.categories.viewAll")}
+            </Text>
+          </div>
+          <div className="overflow-x-auto -mx-4 px-4">
+            <div className="flex gap-3" style={{ width: "max-content" }}>
+              {categories.map((category) => (
+                <div key={category.id} className="flex-shrink-0 text-center">
+                  <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden">
+                    <img
+                      src={category.image}
+                      alt={category.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <Text className="text-xs text-slate-700">
+                    {category.name}
                   </Text>
-                  <div className="flex justify-between items-center gap-1">
-                    <Text className="text-sm font-bold text-red-500 block ">
-                      {product.price}
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Products Section */}
+        <div className="px-4 py-4">
+          <div className="flex items-center justify-between mb-3">
+            <Text className="text-base font-bold">
+              {t("home.products.title")}
+            </Text>
+            <Text className="text-sm text-slate-500 cursor-pointer">
+              {t("home.products.viewAll")}
+            </Text>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            {products.map((product) => (
+              <div
+                key={product.id}
+                className="!rounded-xl shadow-sm overflow-hidden cursor-pointer"
+                onClick={() => onSelectProduct?.(product)}
+              >
+                <div>
+                  <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="p-3">
+                    <Text className="text-sm font-medium block line-clamp-2 min-h-[2.5rem]">
+                      {product.name}
                     </Text>
-                    <div className="!rounded-full !bg-slate-800 !border-slate-800 text-xs w-auto text-center text-white py-1 px-2.5">
-                      {t("home.products.buyNow")}
+                    <div className="flex justify-between items-center gap-1">
+                      <Text className="text-sm font-bold text-red-500 block ">
+                        {product.price}
+                      </Text>
+                      <div className="!rounded-full !bg-slate-800 !border-slate-800 text-xs w-auto text-center text-white py-1 px-2.5">
+                        {t("home.products.buyNow")}
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
+            ))}
+          </div>
+
+          {/* Load More Trigger */}
+          {hasMore && (
+            <div ref={loadMoreRef} className="py-4 text-center">
+              {loading && <Text className="text-slate-500">加载中...</Text>}
             </div>
-          ))}
+          )}
+
+          {!hasMore && products.length > 0 && (
+            <div className="py-4 text-center">
+              <Text className="text-slate-500">没有更多商品了</Text>
+            </div>
+          )}
         </div>
-
-        {/* Load More Trigger */}
-        {hasMore && (
-          <div ref={loadMoreRef} className="py-4 text-center">
-            {loading && <Text className="text-slate-500">加载中...</Text>}
-          </div>
-        )}
-
-        {!hasMore && products.length > 0 && (
-          <div className="py-4 text-center">
-            <Text className="text-slate-500">没有更多商品了</Text>
-          </div>
-        )}
       </div>
     </div>
   );

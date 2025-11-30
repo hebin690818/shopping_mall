@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Button, Typography } from "antd";
 import { LeftOutlined, MinusOutlined, PlusOutlined } from "@ant-design/icons";
+import { useTranslation } from "react-i18next";
 import type { Product } from "../home";
 
 const { Title, Text } = Typography;
@@ -20,6 +21,7 @@ const defaultAddress = {
 
 export default function OrderConfirmPage({ product, onBack, onSubmit }: OrderConfirmPageProps) {
   const [quantity, setQuantity] = useState(1);
+  const { t } = useTranslation("common");
 
   const unitPrice = useMemo(() => {
     const value = parseFloat(product.price.replace(/[^\d.]/g, ""));
@@ -53,31 +55,38 @@ export default function OrderConfirmPage({ product, onBack, onSubmit }: OrderCon
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-white pb-28">
-      <div className="px-4 pt-8">
-        <div className="relative flex items-center">
-          <button
-            onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-600"
-            aria-label="返回"
-            type="button"
-          >
-            <LeftOutlined />
-          </button>
-          <div className="flex-1 text-center text-lg font-semibold text-slate-900">
-            确认订单
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-100 via-white to-white shadow-sm">
+        <div className="px-4 pt-8 pb-4">
+          <div className="relative flex items-center">
+            <button
+              onClick={onBack}
+              className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow-sm text-slate-600"
+              aria-label="返回"
+              type="button"
+            >
+              <LeftOutlined />
+            </button>
+            <div className="flex-1 text-center text-lg font-semibold text-slate-900">
+              {t("checkout.title")}
+            </div>
+            <div className="w-10" />
           </div>
-          <div className="w-10" />
         </div>
       </div>
 
-      <div className="mt-6 space-y-4 px-4">
+      {/* Content with padding-top to avoid header overlap */}
+      <div className="pt-20">
+        <div className="mt-6 space-y-4 px-4">
         <section className="bg-white rounded-3xl p-5 shadow-sm space-y-3">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center text-xl">
               📦
             </div>
             <div>
-              <div className="text-sm text-slate-500">收货地址</div>
+              <div className="text-sm text-slate-500">
+                {t("checkout.shippingAddress")}
+              </div>
               <div className="text-base font-semibold text-slate-900">{defaultAddress.name}</div>
             </div>
           </div>
@@ -92,7 +101,7 @@ export default function OrderConfirmPage({ product, onBack, onSubmit }: OrderCon
 
         <section className="bg-white rounded-3xl p-5 shadow-sm space-y-4">
           <Title level={5} className="!mb-0">
-            订单详情
+            {t("checkout.orderDetail")}
           </Title>
 
           <div className="flex gap-4">
@@ -101,13 +110,17 @@ export default function OrderConfirmPage({ product, onBack, onSubmit }: OrderCon
             </div>
             <div className="flex-1 space-y-2">
               <div className="font-semibold text-slate-900">{product.name}</div>
-              <div className="text-xs text-slate-500">预售15天内发货</div>
+              <div className="text-xs text-slate-500">
+                {t("checkout.presale")}
+              </div>
               <div className="text-lg font-semibold text-slate-900">{formattedUnitPrice}</div>
             </div>
           </div>
 
           <div className="flex items-center justify-between">
-            <span className="text-sm text-slate-500">购买数量</span>
+            <span className="text-sm text-slate-500">
+              {t("checkout.quantity")}
+            </span>
             <div className="flex items-center gap-3 bg-slate-100 rounded-full px-3 py-1">
               <button
                 className="w-8 h-8 flex items-center justify-center rounded-full bg-white shadow text-slate-600 disabled:opacity-40"
@@ -134,7 +147,7 @@ export default function OrderConfirmPage({ product, onBack, onSubmit }: OrderCon
 
         <section className="bg-white rounded-3xl p-5 shadow-sm space-y-4">
           <Title level={5} className="!mb-0">
-            支付方式
+            {t("checkout.payMethod")}
           </Title>
 
           <div className="flex items-center justify-between bg-slate-50 rounded-2xl p-4">
@@ -147,19 +160,26 @@ export default function OrderConfirmPage({ product, onBack, onSubmit }: OrderCon
                 />
               </div>
               <div>
-                <div className="font-semibold text-slate-900">USDT支付</div>
-                <div className="text-xs text-slate-500">稳定币支付，实时结算</div>
+                <div className="font-semibold text-slate-900">
+                  {t("checkout.usdtPay")}
+                </div>
+                <div className="text-xs text-slate-500">
+                  {t("checkout.usdtDesc")}
+                </div>
               </div>
             </div>
             <div className="w-5 h-5 rounded-full border-4 border-slate-900" aria-label="当前选中" />
           </div>
         </section>
+        </div>
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-5 py-4">
         <div className="flex items-center gap-4">
           <div className="flex-1">
-            <div className="text-xs text-slate-500">合计</div>
+            <div className="text-xs text-slate-500">
+              {t("checkout.totalLabel")}
+            </div>
             <div className="text-2xl font-semibold text-slate-900">{formattedTotal}</div>
           </div>
           <Button
@@ -169,7 +189,7 @@ export default function OrderConfirmPage({ product, onBack, onSubmit }: OrderCon
             className="!bg-slate-900 !border-slate-900 w-40"
             onClick={handleSubmit}
           >
-            立即支付
+            {t("checkout.payNow")}
           </Button>
         </div>
       </div>
