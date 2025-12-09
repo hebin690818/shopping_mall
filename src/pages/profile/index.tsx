@@ -1,24 +1,17 @@
 import { useState, useEffect } from "react";
 import { Card, Typography, Button, Progress, message } from "antd";
 import { useTranslation } from "react-i18next";
-import { useAccount } from "wagmi";
+import { useConnection } from "wagmi";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
 import { CopyOutlined, RightOutlined } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
 
-type ProfilePageProps = {
-  onOpenOrders?: () => void;
-  onOpenMerchantCenter?: () => void;
-  onOpenSettings?: () => void;
-};
-
-export default function ProfilePage({
-  onOpenOrders,
-  onOpenMerchantCenter,
-  onOpenSettings,
-}: ProfilePageProps) {
+export default function ProfilePage() {
+  const navigate = useNavigate();
   const { t } = useTranslation("common");
-  const { address } = useAccount();
+  const { address } = useConnection();
   const [isScrolled, setIsScrolled] = useState(false);
 
   const formatAddress = (addr: string | undefined) => {
@@ -180,7 +173,7 @@ export default function ProfilePage({
             <Card className="!rounded-xl shadow-sm !p-0">
               <button
                 className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
-                onClick={onOpenOrders}
+                onClick={() => navigate(ROUTES.ORDERS_LIST)}
               >
                 <Text className="text-base">{t("profile.links.orders")}</Text>
                 <RightOutlined className="text-slate-400" />
@@ -189,7 +182,7 @@ export default function ProfilePage({
             <Card className="!rounded-xl shadow-sm !p-0">
               <button
                 className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
-                onClick={onOpenMerchantCenter}
+                onClick={() => navigate(ROUTES.MERCHANT_CENTER)}
               >
                 <Text className="text-base">{t("profile.links.merchant")}</Text>
                 <RightOutlined className="text-slate-400" />
@@ -198,7 +191,7 @@ export default function ProfilePage({
             <Card className="!rounded-xl shadow-sm !p-0">
               <button
                 className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
-                onClick={onOpenSettings}
+                onClick={() => navigate(ROUTES.SETTINGS)}
               >
                 <Text className="text-base">{t("profile.links.settings")}</Text>
                 <RightOutlined className="text-slate-400" />

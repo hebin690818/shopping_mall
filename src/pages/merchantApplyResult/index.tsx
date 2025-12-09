@@ -1,22 +1,15 @@
 import { Button, Typography } from "antd";
-import { LeftOutlined, CheckCircleTwoTone, CloseCircleTwoTone } from "@ant-design/icons";
+import { CheckCircleTwoTone, CloseCircleTwoTone } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+import { ROUTES } from "../../routes";
+import backSvg from "@/assets/back.svg";
 
 const { Title } = Typography;
 
-type Status = "success" | "fail";
-
-type MerchantApplyResultPageProps = {
-  status: Status;
-  onBack?: () => void;
-  onPrimary?: () => void;
-};
-
-export default function MerchantApplyResultPage({
-  status,
-  onBack,
-  onPrimary,
-}: MerchantApplyResultPageProps) {
+export default function MerchantApplyResultPage() {
+  const { status } = useParams<{ status: string }>();
+  const navigate = useNavigate();
   const isSuccess = status === "success";
   const { t } = useTranslation("common");
 
@@ -27,11 +20,11 @@ export default function MerchantApplyResultPage({
         <div className="relative flex items-center justify-center p-4">
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => navigate(ROUTES.MERCHANT)}
             aria-label="返回"
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-700"
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <LeftOutlined />
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
           </button>
           <Title level={4} className="!mb-0">
             {t("merchantApplyResult.title")}
@@ -42,7 +35,7 @@ export default function MerchantApplyResultPage({
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
         {/* 结果卡片 */}
-        <div className="px-4 mt-6">
+        <div className="px-4">
         <div className="bg-white rounded-3xl shadow-sm px-4 py-10 flex items-center justify-center">
           <div className="flex items-center gap-3">
             {isSuccess ? (
@@ -66,7 +59,7 @@ export default function MerchantApplyResultPage({
           block
           shape="round"
           className="h-12 !border-slate-300 !text-slate-900 bg-white"
-          onClick={onBack}
+          onClick={() => navigate(ROUTES.MERCHANT)}
         >
           {t("merchantApplyResult.back")}
         </Button>
@@ -75,7 +68,13 @@ export default function MerchantApplyResultPage({
           block
           shape="round"
           className="h-12 !bg-slate-900 !border-slate-900"
-          onClick={onPrimary}
+          onClick={() => {
+            if (isSuccess) {
+              navigate(ROUTES.HOME);
+            } else {
+              navigate(ROUTES.MERCHANT_APPLY);
+            }
+          }}
         >
           {isSuccess
             ? t("merchantApplyResult.uploadProduct")

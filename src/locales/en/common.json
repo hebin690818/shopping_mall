@@ -229,6 +229,8 @@
   "checkout": {
     "title": "Confirm Order",
     "shippingAddress": "Shipping Address",
+    "addAddress": "Add Shipping Address",
+    "addAddressTip": "Tap to add shipping address",
     "orderDetail": "Order Details",
     "presale": "Pre-sale, ships within 15 days",
     "quantity": "Quantity",

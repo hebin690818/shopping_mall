@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import { Button, Typography } from "antd";
-import { LeftOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
 import product from "@/assets/product.png";
+import backSvg from "@/assets/back.svg";
 
 const { Title, Text } = Typography;
 
@@ -40,15 +42,8 @@ const initialProducts: MerchantProduct[] = [
   },
 ];
 
-type MerchantCenterPageProps = {
-  onBack?: () => void;
-  onEditProduct?: (product: MerchantProduct) => void;
-};
-
-export default function MerchantCenterPage({
-  onBack,
-  onEditProduct,
-}: MerchantCenterPageProps) {
+export default function MerchantCenterPage() {
+  const navigate = useNavigate();
   const { t } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<"all" | "on" | "off">("on");
   const [products, setProducts] = useState<MerchantProduct[]>(initialProducts);
@@ -77,22 +72,20 @@ export default function MerchantCenterPage({
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-100 shadow-sm">
         <div className="relative flex items-center justify-center p-4">
-          {onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              aria-label="返回"
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-700"
-            >
-              <LeftOutlined />
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.PROFILE)}
+            aria-label="返回"
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
+          >
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
+          </button>
           <Title level={4} className="!mb-0">
             {t("merchantCenter.title")}
           </Title>
         </div>
         {/* Fixed Tabs */}
-        <div className="bg-white px-4 py-3 flex gap-2 border-b border-slate-100">
+        <div className="bg-white px-4 pb-3 flex gap-2 border-b border-slate-100">
           <button
             type="button"
             className={`flex-1 h-10 rounded-full text-sm ${
@@ -130,7 +123,7 @@ export default function MerchantCenterPage({
       </div>
 
       {/* Content with padding-top to avoid header overlap */}
-      <div className="pt-[140px]">
+      <div className="pt-[120px]">
         {/* 商品列表 */}
         <div className="px-4 py-4 space-y-4">
           {filteredProducts.map((item) => {
@@ -175,7 +168,7 @@ export default function MerchantCenterPage({
                   <Button
                     size="small"
                     className="!rounded-full !bg-white !border-slate-300 !text-slate-900 px-5"
-                    onClick={() => onEditProduct?.(item)}
+                    onClick={() => navigate(ROUTES.MERCHANT_PRODUCT_EDIT.replace(':id', item.id))}
                   >
                     {t("merchantCenter.edit")}
                   </Button>

@@ -229,6 +229,8 @@
   "checkout": {
     "title": "确认订单",
     "shippingAddress": "收货地址",
+    "addAddress": "添加收货地址",
+    "addAddressTip": "点击添加收货地址",
     "orderDetail": "订单详情",
     "presale": "预售15天内发货",
     "quantity": "购买数量",

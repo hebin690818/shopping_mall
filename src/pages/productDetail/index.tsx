@@ -1,16 +1,30 @@
 import { Button, Typography } from "antd";
-import { LeftOutlined } from "@ant-design/icons";
-import { useAccount, useConnect } from "wagmi";
+import { useConnection, useConnect } from "wagmi";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+import { ROUTES } from "../../routes";
 import type { Product } from "../home";
+import backSvg from "@/assets/back.svg";
 
 const { Title, Paragraph, Text } = Typography;
 
-type ProductDetailPageProps = {
-  product: Product | null;
-  onBack: () => void;
-  onPurchase?: (product: Product) => void;
-};
+// 模拟商品数据 - 实际应该从API获取
+const mockProducts: Product[] = [
+  {
+    id: "product-1-1",
+    name: "无线蓝牙耳机 pro",
+    price: "$199.99",
+    image:
+      "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
+  },
+  {
+    id: "product-1-2",
+    name: "Smart Watch Ultra",
+    price: "$199.99",
+    image:
+      "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
+  },
+];
 
 const fallbackProduct: Product = {
   id: "default",
@@ -20,16 +34,16 @@ const fallbackProduct: Product = {
     "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
 };
 
-export default function ProductDetailPage({
-  product,
-  onBack,
-  onPurchase,
-}: ProductDetailPageProps) {
-  const { isConnected } = useAccount();
+export default function ProductDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { isConnected } = useConnection();
   const { connect, connectors, status, error } = useConnect();
   const { t } = useTranslation("common");
 
-  const displayProduct = product ?? fallbackProduct;
+  // 从模拟数据中查找商品，实际应该从API获取
+  const product = mockProducts.find((p) => p.id === id) || fallbackProduct;
+  const displayProduct = product;
   const actionLabel = isConnected
     ? t("productDetail.buyNow")
     : t("productDetail.connectWallet");
@@ -44,21 +58,21 @@ export default function ProductDetailPage({
       return;
     }
 
-    onPurchase?.(displayProduct);
+    navigate(ROUTES.ORDER_CONFIRM.replace(":productId", displayProduct.id));
   };
 
   return (
     <div className="min-h-screen bg-slate-50 pb-32">
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-50 bg-white rounded-b-3xl shadow-sm">
+      <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
         <div className="flex items-center p-4 relative">
           <button
-            onClick={onBack}
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors z-10 relative"
+            onClick={() => navigate(-1)}
+            className="flex items-center justify-center z-10 relative"
             aria-label="返回"
             type="button"
           >
-            <LeftOutlined />
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
           </button>
           <div className="flex-1 text-center font-medium text-base text-slate-900 absolute left-0 right-0 pointer-events-none">
             {t("productDetail.title")}
@@ -67,7 +81,7 @@ export default function ProductDetailPage({
       </div>
 
       {/* Content with padding-top to avoid header overlap */}
-      <div className="pt-20">
+      <div className="pt-[100px]">
         {/* Product Image - now in scrollable area */}
         <div className="px-6 pb-6">
           <div className="rounded-[32px] overflow-hidden bg-slate-100 w-full aspect-[3/4] mx-auto">
@@ -78,7 +92,7 @@ export default function ProductDetailPage({
             />
           </div>
         </div>
-        
+
         <div className="px-4 py-6 space-y-4">
           <div className="bg-white rounded-3xl p-5 shadow-sm space-y-3">
             <Title level={4} className="!mb-0">

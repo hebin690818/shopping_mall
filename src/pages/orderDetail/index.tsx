@@ -1,21 +1,84 @@
 import { Typography, Button, message } from "antd";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
 import { CopyOutlined, CarOutlined } from "@ant-design/icons";
 import { type Order } from "../orders";
 import product from "@/assets/product.png";
+import backSvg from "@/assets/back.svg";
 
 const { Text, Title } = Typography;
 
-type OrderDetailPageProps = {
-  order: Order;
-  onBack?: () => void;
-};
+// 模拟订单数据 - 实际应该从API获取
+const mockOrders: Order[] = [
+  {
+    id: "1",
+    orderNumber: "ORD-2024-001",
+    date: "2024-11-20",
+    status: "completed",
+    product: {
+      image: product,
+      name: "无线蓝牙耳机 Pro",
+      store: "科技数码旗舰店",
+      price: "299.99",
+      quantity: 1,
+    },
+    total: "299.99",
+    paymentAmount: "299.99",
+    logisticsCompany: "韵达快递",
+    logisticsNumber: "12345667890890890",
+    shippingTime: "2025-05-05",
+    paymentTime: "2025-05-05",
+  },
+  {
+    id: "2",
+    orderNumber: "ORD-2024-002",
+    date: "2024-11-22",
+    status: "delivering",
+    product: {
+      image: product,
+      name: "智能运动手环",
+      store: "科技数码旗舰店",
+      price: "299.99",
+      quantity: 1,
+    },
+    total: "299.99",
+    paymentAmount: "123.00",
+    logisticsCompany: "韵达快递",
+    logisticsNumber: "12345667890890890",
+    shippingTime: "2025-05-05",
+    paymentTime: "2025-05-05",
+  },
+  {
+    id: "3",
+    orderNumber: "ORD-2024-003",
+    date: "2024-11-24",
+    status: "pending",
+    product: {
+      image: product,
+      name: "便携式蓝牙音箱",
+      store: "科技数码旗舰店",
+      price: "299.99",
+      quantity: 1,
+    },
+    total: "299.99",
+  },
+];
 
-export default function OrderDetailPage({
-  order,
-  onBack,
-}: OrderDetailPageProps) {
+export default function OrderDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const { t } = useTranslation("common");
+
+  // 从模拟数据中查找订单，实际应该从API获取
+  const order = mockOrders.find((o) => o.id === id);
+  
+  if (!order) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Text>订单不存在</Text>
+      </div>
+    );
+  }
 
   const handleCopyOrderNumber = async () => {
     try {
@@ -70,16 +133,14 @@ export default function OrderDetailPage({
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center p-4">
-          {onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              aria-label="返回"
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-700 text-xl"
-            >
-              ←
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            aria-label="返回"
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
+          >
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
+          </button>
           <Title level={4} className="!mb-0">
             {t("orderDetail.title")}
           </Title>

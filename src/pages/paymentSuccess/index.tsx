@@ -1,14 +1,13 @@
 import { Button, Typography } from "antd";
-import { LeftOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
 import type { Product } from "../home";
+import backSvg from "@/assets/back.svg";
 
 const { Title, Paragraph } = Typography;
 
 type PaymentSuccessPageProps = {
-  onContinue: () => void;
-  onViewOrders: () => void;
-  onBack?: () => void;
   recommendedProducts?: Product[];
 };
 
@@ -44,11 +43,9 @@ const fallbackRecommendations: Product[] = [
 ];
 
 export default function PaymentSuccessPage({
-  onContinue,
-  onViewOrders,
-  onBack,
   recommendedProducts,
 }: PaymentSuccessPageProps) {
+  const navigate = useNavigate();
   const list = recommendedProducts ?? fallbackRecommendations;
   const { t } = useTranslation("common");
 
@@ -56,14 +53,14 @@ export default function PaymentSuccessPage({
     <div className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-white pb-12">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-gradient-to-b from-slate-100 via-white to-white shadow-sm">
-        <div className="px-4 pt-8 pb-4 flex items-center gap-3">
+        <div className="p-4 flex items-center gap-3">
           <button
             type="button"
-            onClick={onBack ?? onContinue}
+            onClick={() => navigate(ROUTES.HOME)}
             aria-label="返回"
-            className="w-10 h-10 flex items-center justify-center rounded-full bg-white shadow text-slate-600"
+            className="flex items-center justify-center z-10"
           >
-            <LeftOutlined />
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
           </button>
           <div className="text-lg font-semibold text-slate-900">
             {t("paymentSuccess.title")}
@@ -72,8 +69,8 @@ export default function PaymentSuccessPage({
       </div>
 
       {/* Content with padding-top to avoid header overlap */}
-      <div className="pt-20">
-        <div className="px-4 mt-8 space-y-6">
+      <div className="pt-[100px]">
+        <div className="px-4 space-y-6">
         <div className="bg-white rounded-3xl p-8 text-center shadow-sm space-y-4">
           <div className="w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center text-2xl mx-auto">
             ✓
@@ -89,7 +86,7 @@ export default function PaymentSuccessPage({
               block
               shape="round"
               className="!h-12 !bg-white !border-slate-200 !text-slate-900 shadow-sm"
-              onClick={onContinue}
+              onClick={() => navigate(ROUTES.HOME)}
             >
               {t("paymentSuccess.continue")}
             </Button>
@@ -98,7 +95,7 @@ export default function PaymentSuccessPage({
               shape="round"
               className="!h-12 !bg-slate-900 !border-slate-900"
               type="primary"
-              onClick={onViewOrders}
+              onClick={() => navigate(ROUTES.ORDERS)}
             >
               {t("paymentSuccess.viewOrders")}
             </Button>

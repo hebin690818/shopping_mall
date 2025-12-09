@@ -1,23 +1,20 @@
 import { Button, Form, Input, Typography } from "antd";
-import { LeftOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
+import backSvg from "@/assets/back.svg";
 
 const { Title, Text } = Typography;
 
-type MerchantApplyPageProps = {
-  onBack?: () => void;
-  onSubmitSuccess?: (payload: { name: string; description?: string }) => void;
-};
-
-export default function MerchantApplyPage({
-  onBack,
-  onSubmitSuccess,
-}: MerchantApplyPageProps) {
+export default function MerchantApplyPage() {
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const { t } = useTranslation("common");
 
   const handleFinish = (values: { name: string; description?: string }) => {
-    onSubmitSuccess?.(values);
+    // 这里可以添加实际的提交逻辑
+    console.log("提交商家申请:", values);
+    navigate(ROUTES.MERCHANT_APPLY_RESULT.replace(':status', 'success'));
   };
 
   return (
@@ -27,11 +24,11 @@ export default function MerchantApplyPage({
         <div className="relative flex items-center justify-center p-4">
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => navigate(-1)}
             aria-label="返回"
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-700"
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <LeftOutlined />
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
           </button>
           <Title level={4} className="!mb-0">
             {t("merchantApply.title")}
@@ -42,8 +39,8 @@ export default function MerchantApplyPage({
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
         {/* 表单卡片 */}
-        <div className="px-4 mt-4">
-        <div className="bg-white rounded-3xl shadow-sm p-4">
+        <div className="px-4">
+        <div className="bg-white rounded-2xl shadow-sm p-4">
           <Form
             layout="vertical"
             form={form}
@@ -67,7 +64,7 @@ export default function MerchantApplyPage({
               />
             </Form.Item>
 
-            <div className="h-px bg-slate-100 -mx-4 mb-1" />
+            <div className="h-px bg-slate-100" />
 
             <Form.Item
               label={

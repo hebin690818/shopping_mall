@@ -2,15 +2,15 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Input, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { SearchOutlined } from "@ant-design/icons";
-import { useAccount, useConnect } from "wagmi";
+import { useConnection, useConnect, useSignMessage } from "wagmi";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
+import { useAuth } from "../../hooks/useAuth";
+import { api } from "../../lib/api";
+import type { Category } from "../../lib/api";
 
 const { Text } = Typography;
 
-type Category = {
-  id: string;
-  name: string;
-  image: string;
-};
 
 export type Product = {
   id: string;
@@ -19,9 +19,7 @@ export type Product = {
   image: string;
 };
 
-type HomePageProps = {
-  onSelectProduct?: (product: Product) => void;
-};
+type HomePageProps = {};
 
 // 模拟轮播图数据
 const banners = [
@@ -31,13 +29,6 @@ const banners = [
   "https://res.vmallres.com/uomcdn/CN/cms/202511/fafa66b2492b4cfe8b779a4dcd27a1fa.jpg",
 ];
 
-// 模拟分类数据
-const categories: Category[] = Array.from({ length: 10 }, (_, i) => ({
-  id: `cat-${i + 1}`,
-  name: `分类${i + 1}`,
-  image:
-    "https://res3.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_CCB892969E4A54DB10FEECB7BB4E704D.png",
-}));
 
 // 模拟商品数据生成函数
 const generateProducts = (page: number, pageSize: number = 10): Product[] => {
@@ -55,12 +46,18 @@ const generateProducts = (page: number, pageSize: number = 10): Product[] => {
   }));
 };
 
-export default function HomePage({ onSelectProduct }: HomePageProps) {
+export default function HomePage({}: HomePageProps) {
   const { t } = useTranslation("common");
-  const { isConnected, address } = useAccount();
+  const navigate = useNavigate();
+  const { isConnected, address } = useConnection();
   const { connect, connectors, status } = useConnect();
+  const { isPending: isSigning } = useSignMessage();
+  // 使用认证hook，自动处理登录
+  const { isAuthenticated, isLoggingIn } = useAuth();
   const [currentBanner, setCurrentBanner] = useState(0);
   const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
@@ -174,6 +171,23 @@ export default function HomePage({ onSelectProduct }: HomePageProps) {
     }
   };
 
+  // 获取分类数据
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const data = await api.getCategories();
+        setCategories(data);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      } finally {
+        setCategoriesLoading(false);
+      }
+    };
+
+    fetchCategories();
+  }, []);
+
   // 初始加载商品
   useEffect(() => {
     const initialProducts = generateProducts(1);
@@ -276,11 +290,11 @@ export default function HomePage({ onSelectProduct }: HomePageProps) {
               disabled:shadow-lg
             `}
           >
-            {status === "pending" && (
+            {(status === "pending" || isSigning) && (
               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
-            {isConnected && status !== "pending" && (
-              <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
+            {isConnected && status !== "pending" && !isLoggingIn && (
+              <span className={`w-2 h-2 rounded-full bg-white ${isAuthenticated ? 'animate-pulse' : ''}`} />
             )}
             <span className="whitespace-nowrap">
               {isConnected
@@ -358,27 +372,34 @@ export default function HomePage({ onSelectProduct }: HomePageProps) {
             <Text className="text-base font-bold">
               {t("home.categories.title")}
             </Text>
-            <Text className="text-sm text-slate-500 cursor-pointer">
-              {t("home.categories.viewAll")}
-            </Text>
           </div>
           <div className="overflow-x-auto -mx-4 px-4">
-            <div className="flex gap-3" style={{ width: "max-content" }}>
-              {categories.map((category) => (
-                <div key={category.id} className="flex-shrink-0 text-center">
-                  <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden">
-                    <img
-                      src={category.image}
-                      alt={category.name}
-                      className="w-full h-full object-cover"
-                    />
+            {categoriesLoading ? (
+              <div className="flex justify-center py-4">
+                <Text className="text-slate-500">加载中...</Text>
+              </div>
+            ) : categories.length > 0 ? (
+              <div className="flex gap-3" style={{ width: "max-content" }}>
+                {categories.map((category) => (
+                  <div key={category.id} className="flex-shrink-0 text-center">
+                    <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden">
+                      <img
+                        src={category.image}
+                        alt={category.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <Text className="text-xs text-slate-700">
+                      {category.name}
+                    </Text>
                   </div>
-                  <Text className="text-xs text-slate-700">
-                    {category.name}
-                  </Text>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="flex justify-center py-4">
+                <Text className="text-slate-500">暂无分类数据</Text>
+              </div>
+            )}
           </div>
         </div>
 
@@ -388,16 +409,13 @@ export default function HomePage({ onSelectProduct }: HomePageProps) {
             <Text className="text-base font-bold">
               {t("home.products.title")}
             </Text>
-            <Text className="text-sm text-slate-500 cursor-pointer">
-              {t("home.products.viewAll")}
-            </Text>
           </div>
           <div className="grid grid-cols-2 gap-4">
             {products.map((product) => (
               <div
                 key={product.id}
                 className="!rounded-xl shadow-sm overflow-hidden cursor-pointer"
-                onClick={() => onSelectProduct?.(product)}
+                onClick={() => navigate(ROUTES.PRODUCT_DETAIL.replace(':id', product.id))}
               >
                 <div>
                   <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">

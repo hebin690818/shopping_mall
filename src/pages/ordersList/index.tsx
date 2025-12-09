@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { Button, Typography, Input, message } from "antd";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
 import { CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
 import { type Order } from "../orders";
 import product from "@/assets/product.png";
+import backSvg from "@/assets/back.svg";
 
 const { Text, Title } = Typography;
 
@@ -43,15 +46,8 @@ const mockOrders: Order[] = [
   },
 ];
 
-type OrdersListPageProps = {
-  onBack?: () => void;
-  onViewDetails?: (order: Order) => void;
-};
-
-export default function OrdersListPage({
-  onBack,
-  onViewDetails,
-}: OrdersListPageProps) {
+export default function OrdersListPage() {
+  const navigate = useNavigate();
   const { t } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<string>("all");
   const [logisticsData, setLogisticsData] = useState<
@@ -131,23 +127,21 @@ export default function OrdersListPage({
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-sm shadow-sm">
         <div className="relative flex items-center justify-center p-4">
-          {onBack && (
-            <button
-              type="button"
-              onClick={onBack}
-              aria-label="返回"
-              className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-slate-700 text-xl"
-            >
-              ←
-            </button>
-          )}
+          <button
+            type="button"
+            onClick={() => navigate(ROUTES.PROFILE)}
+            aria-label="返回"
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
+          >
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
+          </button>
           <Title level={4} className="!mb-0">
             {t("orderDetail.title")}
           </Title>
         </div>
         {/* Fixed Tabs */}
         <div
-          className="px-4 py-3 flex gap-2"
+          className="px-4 pb-3 flex gap-2"
           style={{ background: "transparent" }}
         >
           {tabs.map((tab) => (
@@ -167,7 +161,7 @@ export default function OrdersListPage({
       </div>
 
       {/* Content with padding-top to avoid header overlap */}
-      <div className="pt-[140px]">
+      <div className="pt-[120px]">
 
         {/* Orders List */}
         <div className="px-4 py-4 space-y-4">
@@ -226,7 +220,7 @@ export default function OrdersListPage({
                     <button
                       type="button"
                       className="text-xs text-slate-500 flex items-center gap-1"
-                      onClick={() => onViewDetails?.(order)}
+                      onClick={() => navigate(ROUTES.ORDER_DETAIL.replace(':id', order.id))}
                     >
                       {t("ordersCenter.viewDetails")}
                       <span className="text-slate-400">›</span>

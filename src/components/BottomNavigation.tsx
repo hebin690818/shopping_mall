@@ -1,38 +1,37 @@
 import { HomeOutlined, ShopOutlined, ShoppingCartOutlined, UserOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { ROUTES } from '../routes'
 
 type NavItem = {
-  key: string
+  path: string
   icon: React.ReactNode
   label: string
 }
 
-type BottomNavigationProps = {
-  activeKey: string
-  onChange?: (key: string) => void
-}
-
-export default function BottomNavigation({ activeKey, onChange }: BottomNavigationProps) {
+export default function BottomNavigation() {
   const { t } = useTranslation('common')
+  const navigate = useNavigate()
+  const location = useLocation()
 
   const navItems: NavItem[] = [
     {
-      key: 'home',
+      path: ROUTES.HOME,
       icon: <HomeOutlined className="text-xl" />,
       label: t('navigation.home'),
     },
     {
-      key: 'merchant',
+      path: ROUTES.MERCHANT,
       icon: <ShopOutlined className="text-xl" />,
       label: t('navigation.merchant'),
     },
     {
-      key: 'orders',
+      path: ROUTES.ORDERS,
       icon: <ShoppingCartOutlined className="text-xl" />,
       label: t('navigation.orders'),
     },
     {
-      key: 'profile',
+      path: ROUTES.PROFILE,
       icon: <UserOutlined className="text-xl" />,
       label: t('navigation.profile'),
     },
@@ -43,10 +42,10 @@ export default function BottomNavigation({ activeKey, onChange }: BottomNavigati
       <div className="flex items-center justify-around py-2">
         {navItems.map((item) => (
           <button
-            key={item.key}
-            onClick={() => onChange?.(item.key)}
+            key={item.path}
+            onClick={() => navigate(item.path)}
             className={`flex flex-col items-center justify-center gap-1 px-4 py-2 min-w-0 flex-1 transition-colors ${
-              activeKey === item.key
+              location.pathname === item.path
                 ? 'text-purple-500'
                 : 'text-slate-500'
             }`}

@@ -1,27 +1,52 @@
 import { Button, Form, Input, Typography } from "antd";
-import { LeftOutlined, PlusOutlined, CloseCircleFilled } from "@ant-design/icons";
+import { PlusOutlined, CloseCircleFilled } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
+import { useNavigate, useParams } from "react-router-dom";
+import { ROUTES } from "../../routes";
 import type { MerchantProduct } from "../merchantCenter";
 import productImg from "@/assets/product.png";
+import backSvg from "@/assets/back.svg";
 
 const { Title, Text } = Typography;
 
-type MerchantProductEditPageProps = {
-  product?: MerchantProduct | null;
-  onBack?: () => void;
-  onSave?: (values: { name: string; description?: string; price: string }) => void;
-};
+// 模拟商品数据 - 实际应该从API获取
+const mockProducts: MerchantProduct[] = [
+  {
+    id: "1",
+    name: "无线蓝牙耳机 Pro",
+    price: "299.99",
+    stock: 100,
+    status: "on",
+  },
+  {
+    id: "2",
+    name: "无线蓝牙耳机 Pro",
+    price: "299.99",
+    stock: 100,
+    status: "off",
+  },
+  {
+    id: "3",
+    name: "无线蓝牙耳机 Pro",
+    price: "299.99",
+    stock: 100,
+    status: "off",
+  },
+];
 
-export default function MerchantProductEditPage({
-  product,
-  onBack,
-  onSave,
-}: MerchantProductEditPageProps) {
+export default function MerchantProductEditPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const [form] = Form.useForm();
   const { t } = useTranslation("common");
 
+  // 从模拟数据中查找商品，实际应该从API获取
+  const product = mockProducts.find((p) => p.id === id);
+
   const handleFinish = (values: { name: string; description?: string; price: string }) => {
-    onSave?.(values);
+    // 这里可以添加实际的保存逻辑
+    console.log("保存商品信息:", values);
+    navigate(ROUTES.MERCHANT_CENTER);
   };
 
   return (
@@ -31,11 +56,11 @@ export default function MerchantProductEditPage({
         <div className="relative flex items-center justify-center p-4">
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => navigate(ROUTES.MERCHANT_CENTER)}
             aria-label="返回"
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-700"
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <LeftOutlined />
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
           </button>
           <Title level={4} className="!mb-0">
             {t("merchantEdit.title")}

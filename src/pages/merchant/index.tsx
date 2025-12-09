@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button, Typography } from "antd";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -19,11 +21,8 @@ const merchants: Merchant[] = Array.from({ length: 4 }, (_, index) => ({
     "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
 }));
 
-type MerchantPageProps = {
-  onApply?: () => void;
-};
-
-export default function MerchantPage({ onApply }: MerchantPageProps) {
+export default function MerchantPage() {
+  const navigate = useNavigate();
   const { t } = useTranslation("common");
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -89,7 +88,7 @@ export default function MerchantPage({ onApply }: MerchantPageProps) {
             block
             shape="round"
             className="!bg-slate-900 !border-slate-900 h-11 mt-2"
-            onClick={onApply}
+            onClick={() => navigate(ROUTES.MERCHANT_APPLY)}
           >
             {t("merchantPage.applyCta")}
           </Button>

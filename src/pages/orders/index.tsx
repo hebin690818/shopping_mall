@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Button, Typography } from "antd";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -87,12 +89,8 @@ const mockOrders: Order[] = [
   },
 ];
 
-type OrdersPageProps = {
-  onViewDetails?: (order: Order) => void;
-  onBack?: () => void;
-};
-
-export default function OrdersPage({ onViewDetails, onBack }: OrdersPageProps) {
+export default function OrdersPage() {
+  const navigate = useNavigate();
   const { t } = useTranslation("common");
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isScrolled, setIsScrolled] = useState(false);
@@ -189,16 +187,6 @@ export default function OrdersPage({ onViewDetails, onBack }: OrdersPageProps) {
             <Title level={4} className="!mb-0">
               {t("ordersCenter.title")}
             </Title>
-            {onBack && (
-              <button
-                type="button"
-                onClick={onBack}
-                aria-label="返回"
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-700"
-              >
-                ←
-              </button>
-            )}
           </div>
           <Text className="text-sm text-slate-500">
             {t("ordersCenter.total", { count: mockOrders.length })}
@@ -206,7 +194,7 @@ export default function OrdersPage({ onViewDetails, onBack }: OrdersPageProps) {
         </div>
         {/* Fixed Tabs */}
         <div
-          className="px-4 py-3 flex gap-2 overflow-x-auto"
+          className="px-4 pb-3 flex gap-2 overflow-x-auto"
           style={{ background: "transparent" }}
         >
           {tabs.map((tab) => (
@@ -285,14 +273,14 @@ export default function OrdersPage({ onViewDetails, onBack }: OrdersPageProps) {
               </div>
 
               {/* Action Buttons */}
-              <div className="border-t border-slate-100 px-4 py-3">
+              <div className="border-t border-slate-100 p-4">
                 {order.status === "completed" && (
                   <div className="flex justify-end">
                     <Button
                       type="default"
                       size="small"
                       className="!text-slate-600 !border-slate-300"
-                      onClick={() => onViewDetails?.(order)}
+                      onClick={() => navigate(ROUTES.ORDER_DETAIL.replace(':id', order.id))}
                     >
                       {t("ordersCenter.viewDetails")}
                     </Button>
@@ -304,7 +292,7 @@ export default function OrdersPage({ onViewDetails, onBack }: OrdersPageProps) {
                       type="default"
                       size="small"
                       className="!text-slate-600 !border-slate-300"
-                      onClick={() => onViewDetails?.(order)}
+                      onClick={() => navigate(ROUTES.ORDER_DETAIL.replace(':id', order.id))}
                     >
                       {t("ordersCenter.viewDetails")}
                     </Button>

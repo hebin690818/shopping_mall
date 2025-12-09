@@ -1,27 +1,26 @@
 import { Button, Card, Typography, Form, Input } from "antd";
-import { LeftOutlined, RightOutlined, CopyOutlined } from "@ant-design/icons";
-import { useAccount } from "wagmi";
+import { RightOutlined, CopyOutlined } from "@ant-design/icons";
+import { useConnection } from "wagmi";
 import { useTranslation } from "react-i18next";
+import { useNavigate } from "react-router-dom";
+import { ROUTES } from "../../routes";
+import { useGlobalLoading } from "../../contexts/LoadingProvider";
+import { useRef } from "react";
 import i18n from "@/i18n/config";
+import backSvg from "@/assets/back.svg";
 
 const { Title, Text } = Typography;
 
-type SettingsPageProps = {
-  isMerchant?: boolean;
-  onBack?: () => void;
-  onEditAddress?: () => void;
-  onSave?: (values: { name: string; description?: string }) => void;
-};
-
-export default function SettingsPage({
-  isMerchant,
-  onBack,
-  onEditAddress,
-  onSave,
-}: SettingsPageProps) {
-  const { address } = useAccount();
+export default function SettingsPage() {
+  const navigate = useNavigate();
+  const { address } = useConnection();
   const { t } = useTranslation("common");
+  const { showLoading, hideLoading } = useGlobalLoading();
+  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [form] = Form.useForm();
+  
+  // 这里可以从用户状态或API获取是否为商家
+  const isMerchant = false; // 实际应该从状态管理或API获取
 
   const formatAddress = (addr: string | undefined) => {
     if (!addr) return "";
@@ -41,7 +40,15 @@ export default function SettingsPage({
   };
 
   const handleFinish = (values: { name: string; description?: string }) => {
-    onSave?.(values);
+    showLoading(t("globalLoading.defaultMessage"));
+    if (loadingTimerRef.current) {
+      clearTimeout(loadingTimerRef.current);
+    }
+    loadingTimerRef.current = setTimeout(() => {
+      hideLoading();
+      // 这里可以添加实际的保存商家信息逻辑
+      console.log("保存商家信息:", values);
+    }, 1200);
   };
 
   return (
@@ -53,11 +60,11 @@ export default function SettingsPage({
         <div className="relative flex items-center justify-center p-4">
           <button
             type="button"
-            onClick={onBack}
+            onClick={() => navigate(ROUTES.PROFILE)}
             aria-label="返回"
-            className="absolute left-4 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center rounded-full bg-slate-100 text-slate-700"
+            className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <LeftOutlined />
+            <img src={backSvg} alt="返回" className="w-5 h-5" />
           </button>
           <Title level={4} className="!mb-0">
             {t("settings.title")}
@@ -80,7 +87,7 @@ export default function SettingsPage({
                 <button
                   type="button"
                   className="w-full flex items-center justify-between py-2"
-                  onClick={onEditAddress}
+                  onClick={() => navigate(ROUTES.ADDRESS_EDIT)}
                 >
                   <div className="flex-1 text-left">
                     <Text className="block text-sm font-medium text-slate-900 mb-1">
