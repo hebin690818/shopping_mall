@@ -7,17 +7,10 @@ import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../routes";
 import { useAuth } from "../../hooks/useAuth";
 import { api } from "../../lib/api";
-import type { Category } from "../../lib/api";
+import type { Category, Product } from "../../lib/api";
+import { API_BASE_URL } from "@/lib/config";
 
 const { Text } = Typography;
-
-
-export type Product = {
-  id: string;
-  name: string;
-  price: string;
-  image: string;
-};
 
 type HomePageProps = {};
 
@@ -30,21 +23,6 @@ const banners = [
 ];
 
 
-// 模拟商品数据生成函数
-const generateProducts = (page: number, pageSize: number = 10): Product[] => {
-  return Array.from({ length: pageSize }, (_, i) => ({
-    id: `product-${page}-${i + 1}`,
-    name:
-      i === 0
-        ? "无线蓝牙耳机 pro"
-        : i === 1
-        ? "Smart Watch Ultra"
-        : "占位符占位符占位符占...",
-    price: i === 1 ? "$199.99" : "$199.99",
-    image:
-      "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
-  }));
-};
 
 export default function HomePage({}: HomePageProps) {
   const { t } = useTranslation("common");
@@ -173,43 +151,110 @@ export default function HomePage({}: HomePageProps) {
 
   // 获取分类数据
   useEffect(() => {
+    let isMounted = true; // 组件挂载标志
+    
     const fetchCategories = async () => {
       try {
         setCategoriesLoading(true);
         const data = await api.getCategories();
-        setCategories(data);
-      } catch (error) {
+        // 只在组件仍挂载时更新状态
+        if (isMounted) {
+          setCategories(data);
+        }
+      } catch (error: any) {
+        // 如果是取消的请求，不更新状态
+        if (error?.name === 'AbortError') {
+          return;
+        }
         console.error('Failed to fetch categories:', error);
       } finally {
-        setCategoriesLoading(false);
+        if (isMounted) {
+          setCategoriesLoading(false);
+        }
       }
     };
 
     fetchCategories();
+    
+    // 清理函数
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 初始加载商品
   useEffect(() => {
-    const initialProducts = generateProducts(1);
-    setProducts(initialProducts);
+    let isMounted = true; // 组件挂载标志
+    
+    const fetchInitialProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await api.getProducts({
+          page: 1,
+          page_size: 10,
+        });
+        // 只在组件仍挂载时更新状态
+        if (isMounted) {
+          if (response.data && response.data.length > 0) {
+            setProducts(response.data);
+            setCurrentPage(1);
+            setHasMore(response.data.length >= 10);
+          } else {
+            setHasMore(false);
+          }
+        }
+      } catch (error: any) {
+        // 如果是取消的请求，不更新状态
+        if (error?.name === 'AbortError') {
+          return;
+        }
+        console.error('Failed to fetch products:', error);
+        if (isMounted) {
+          setHasMore(false);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchInitialProducts();
+    
+    // 清理函数
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // 加载更多商品
-  const loadMoreProducts = useCallback(() => {
+  const loadMoreProducts = useCallback(async () => {
     if (loading || !hasMore) return;
 
     setLoading(true);
-    // 模拟API请求延迟
-    setTimeout(() => {
-      const newProducts = generateProducts(currentPage + 1);
-      if (newProducts.length === 0) {
-        setHasMore(false);
-      } else {
-        setProducts((prev) => [...prev, ...newProducts]);
+    try {
+      const response = await api.getProducts({
+        page: currentPage + 1,
+        page_size: 10,
+      });
+      
+      if (response.data && response.data.length > 0) {
+        setProducts((prev) => [...prev, ...response.data]);
         setCurrentPage((prev) => prev + 1);
+        setHasMore(response.data.length >= 10);
+      } else {
+        setHasMore(false);
       }
+    } catch (error: any) {
+      // 如果是取消的请求，不更新状态
+      if (error?.name === 'AbortError') {
+        return;
+      }
+      console.error('Failed to load more products:', error);
+      setHasMore(false);
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   }, [currentPage, loading, hasMore]);
 
   // 使用 Intersection Observer 实现滚动加载
@@ -376,7 +421,7 @@ export default function HomePage({}: HomePageProps) {
           <div className="overflow-x-auto -mx-4 px-4">
             {categoriesLoading ? (
               <div className="flex justify-center py-4">
-                <Text className="text-slate-500">加载中...</Text>
+                <Text className="text-slate-500">{t("loading.loading")}</Text>
               </div>
             ) : categories.length > 0 ? (
               <div className="flex gap-3" style={{ width: "max-content" }}>
@@ -384,7 +429,7 @@ export default function HomePage({}: HomePageProps) {
                   <div key={category.id} className="flex-shrink-0 text-center">
                     <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden">
                       <img
-                        src={category.image}
+                        src={`${API_BASE_URL}${category.image_url}`}
                         alt={category.name}
                         className="w-full h-full object-cover"
                       />
@@ -397,7 +442,7 @@ export default function HomePage({}: HomePageProps) {
               </div>
             ) : (
               <div className="flex justify-center py-4">
-                <Text className="text-slate-500">暂无分类数据</Text>
+                <Text className="text-slate-500">{t("loading.noCategoryData")}</Text>
               </div>
             )}
           </div>
@@ -410,49 +455,59 @@ export default function HomePage({}: HomePageProps) {
               {t("home.products.title")}
             </Text>
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            {products.map((product) => (
-              <div
-                key={product.id}
-                className="!rounded-xl shadow-sm overflow-hidden cursor-pointer"
-                onClick={() => navigate(ROUTES.PRODUCT_DETAIL.replace(':id', product.id))}
-              >
-                <div>
-                  <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                  <div className="p-3">
-                    <Text className="text-sm font-medium block line-clamp-2 min-h-[2.5rem]">
-                      {product.name}
-                    </Text>
-                    <div className="flex justify-between items-center gap-1">
-                      <Text className="text-sm font-bold text-red-500 block ">
-                        {product.price}
+          {loading && products.length === 0 ? (
+            <div className="flex justify-center py-8">
+              <Text className="text-slate-500">{t("loading.loading")}</Text>
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex justify-center py-8">
+              <Text className="text-slate-500">{t("loading.noProducts")}</Text>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4">
+              {products.map((product) => (
+                <div
+                  key={product.id}
+                  className="!rounded-xl shadow-sm overflow-hidden cursor-pointer"
+                  onClick={() => navigate(ROUTES.PRODUCT_DETAIL.replace(':id', product.id))}
+                >
+                  <div>
+                    <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-3">
+                      <Text className="text-sm font-medium block line-clamp-2 min-h-[2.5rem]">
+                        {product.name}
                       </Text>
-                      <div className="!rounded-full !bg-slate-800 !border-slate-800 text-xs w-auto text-center text-white py-1 px-2.5">
-                        {t("home.products.buyNow")}
+                      <div className="flex justify-between items-center gap-1">
+                        <Text className="text-sm font-bold text-red-500 block ">
+                          {product.price}
+                        </Text>
+                        <div className="!rounded-full !bg-slate-800 !border-slate-800 text-xs w-auto text-center text-white py-1 px-2.5">
+                          {t("home.products.buyNow")}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
           {/* Load More Trigger */}
           {hasMore && (
             <div ref={loadMoreRef} className="py-4 text-center">
-              {loading && <Text className="text-slate-500">加载中...</Text>}
+              {loading && <Text className="text-slate-500">{t("loading.loading")}</Text>}
             </div>
           )}
 
           {!hasMore && products.length > 0 && (
             <div className="py-4 text-center">
-              <Text className="text-slate-500">没有更多商品了</Text>
+              <Text className="text-slate-500">{t("loading.noMoreProducts")}</Text>
             </div>
           )}
         </div>

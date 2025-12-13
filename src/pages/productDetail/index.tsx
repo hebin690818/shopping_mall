@@ -69,10 +69,10 @@ export default function ProductDetailPage() {
           <button
             onClick={() => navigate(-1)}
             className="flex items-center justify-center z-10 relative"
-            aria-label="返回"
+            aria-label={t("ariaLabels.back")}
             type="button"
           >
-            <img src={backSvg} alt="返回" className="w-5 h-5" />
+            <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
           </button>
           <div className="flex-1 text-center font-medium text-base text-slate-900 absolute left-0 right-0 pointer-events-none">
             {t("productDetail.title")}
@@ -94,8 +94,8 @@ export default function ProductDetailPage() {
         </div>
 
         <div className="px-4 py-6 space-y-4">
-          <div className="bg-white rounded-3xl p-5 shadow-sm space-y-3">
-            <Title level={4} className="!mb-0">
+          <div className="bg-white rounded-lg p-5 shadow-sm space-y-3">
+            <Title level={5} className="!mb-0">
               {displayProduct.name}
             </Title>
             <Paragraph className="!mb-0 text-slate-500 text-sm leading-relaxed">
@@ -111,7 +111,7 @@ export default function ProductDetailPage() {
             </div>
           </div>
 
-          <div className="bg-white rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="bg-white rounded-lg p-5 shadow-sm space-y-3">
             <Title level={5} className="!mb-1">
               {t("productDetail.introTitle")}
             </Title>
@@ -123,7 +123,7 @@ export default function ProductDetailPage() {
             </Paragraph>
           </div>
 
-          <div className="bg-white rounded-3xl p-5 shadow-sm space-y-3">
+          <div className="bg-white rounded-lg p-5 shadow-sm space-y-3">
             <Title level={5} className="!mb-1">
               {t("productDetail.deliveryTitle")}
             </Title>

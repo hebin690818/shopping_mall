@@ -2,7 +2,9 @@ import { useState, useEffect } from "react";
 import { Button, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { useConnection } from "wagmi";
 import { ROUTES } from "../../routes";
+import { useMarketQuery } from "../../hooks/useMarketContract";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -24,7 +26,11 @@ const merchants: Merchant[] = Array.from({ length: 4 }, (_, index) => ({
 export default function MerchantPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
+  const { address, isConnected } = useConnection();
   const [isScrolled, setIsScrolled] = useState(false);
+  
+  const { useIsMerchant } = useMarketQuery();
+  const { data: isMerchant, isLoading: isCheckingMerchant } = useIsMerchant(address);
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -65,38 +71,94 @@ export default function MerchantPage() {
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
         <div className="px-4 space-y-6">
-        {/* 申请成为商家卡片 */}
-        <section className="bg-white rounded-3xl p-5 shadow-sm space-y-4">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-slate-900/5 flex items-center justify-center">
-              <span className="text-3xl">🏬</span>
+        {/* 商家状态卡片 */}
+        {isCheckingMerchant ? (
+          <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
+            <div className="flex items-center justify-center py-4">
+              <Text className="text-slate-500">{t("merchantPage.checkingStatus")}</Text>
             </div>
-            <div className="flex-1">
-              <div className="text-base font-semibold text-slate-900">
-                {t("merchantPage.applyTitle")}
+          </section>
+        ) : isMerchant ? (
+          /* 已经是商家 - 显示商家管理入口 */
+          <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center">
+                <span className="text-3xl">✅</span>
               </div>
-              <Paragraph className="!mb-1 text-xs text-slate-500">
-                {t("merchantPage.applySubtitle")}
-              </Paragraph>
-              <Text className="text-xs text-slate-400">
-                {t("merchantPage.applyTip")}
-              </Text>
+              <div className="flex-1">
+                <div className="text-base font-semibold text-slate-900">
+                  {t("merchantPage.alreadyMerchant")}
+                </div>
+                <Paragraph className="!mb-1 text-xs text-slate-500">
+                  {t("merchantPage.welcomeBack")}
+                </Paragraph>
+                <Text className="text-xs text-slate-400">
+                  {t("merchantPage.manageTip")}
+                </Text>
+              </div>
             </div>
-          </div>
-          <Button
-            type="primary"
-            block
-            shape="round"
-            className="!bg-slate-900 !border-slate-900 h-11 mt-2"
-            onClick={() => navigate(ROUTES.MERCHANT_APPLY)}
-          >
-            {t("merchantPage.applyCta")}
-          </Button>
-        </section>
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <Button
+                type="default"
+                block
+                shape="round"
+                className="!border-slate-900 !text-slate-900 h-11"
+                onClick={() => {
+                  navigate(ROUTES.MERCHANT_CENTER);
+                }}
+              >
+                {t("profile.links.merchant")}
+              </Button>
+              <Button
+                type="default"
+                block
+                shape="round"
+                className="!border-slate-900 !text-slate-900 h-11"
+                onClick={() => {
+                  navigate(ROUTES.MERCHANT_PRODUCT_EDIT.replace(':id', 'new'));
+                }}
+              >
+                {t("merchantApplyResult.uploadProduct")}
+              </Button>
+            </div>
+          </section>
+        ) : (
+          /* 不是商家 - 显示申请成为商家卡片 */
+          <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-slate-900/5 flex items-center justify-center">
+                <span className="text-3xl">🏬</span>
+              </div>
+              <div className="flex-1">
+                <div className="text-base font-semibold text-slate-900">
+                  {t("merchantPage.applyTitle")}
+                </div>
+                <Paragraph className="!mb-1 text-xs text-slate-500">
+                  {t("merchantPage.applySubtitle")}
+                </Paragraph>
+                <Text className="text-xs text-slate-400">
+                  {t("merchantPage.applyTip")}
+                </Text>
+              </div>
+            </div>
+            <Button
+              type="primary"
+              block
+              shape="round"
+              className="!bg-slate-900 !border-slate-900 h-11 mt-2"
+              onClick={() => navigate(ROUTES.MERCHANT_APPLY)}
+              disabled={!isConnected}
+            >
+              {!isConnected 
+                ? t("messages.connectWalletFirst")
+                : t("merchantPage.applyCta")}
+            </Button>
+          </section>
+        )}
 
         {/* 新入驻商家列表 */}
         <section className="space-y-4">
-          <Title level={4} className="!mb-0">
+          <Title level={5} className="!mb-0">
             {t("merchantPage.newMerchants")}
           </Title>
 
@@ -104,7 +166,7 @@ export default function MerchantPage() {
             {merchants.map((item) => (
               <div
                 key={item.id}
-                className="bg-white rounded-3xl px-4 py-3 flex items-center gap-4 shadow-sm"
+                className="bg-white rounded-lg px-4 py-3 flex items-center gap-4 shadow-sm"
               >
                 <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100">
                   <img

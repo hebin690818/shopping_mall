@@ -1,12 +1,17 @@
-import { useMemo, useState, useRef } from "react";
-import { Button, Typography } from "antd";
+import { useMemo, useState } from "react";
+import { Button, Typography, message } from "antd";
 import { MinusOutlined, PlusOutlined, RightOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
+import { useConnection } from "wagmi";
 import { ROUTES } from "../../routes";
 import { useGlobalLoading } from "../../contexts/LoadingProvider";
-import type { Product } from "../home";
+import { useMarketContract } from "../../hooks/useMarketContract";
+import { useTokenContract, useTokenQuery } from "../../hooks/useTokenContract";
+import { MARKET_CONTRACT_ADDRESS } from "../../lib/config";
+import { needsApproval, parseTokenAmount, formatTokenAmount } from "../../lib/contractUtils";
 import backSvg from "@/assets/back.svg";
+import type { Product } from "@/lib/api";
 
 const { Title, Text } = Typography;
 
@@ -47,9 +52,16 @@ export default function OrderConfirmPage() {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
   const { showLoading, hideLoading } = useGlobalLoading();
+  const { address, isConnected } = useConnection();
   const [quantity, setQuantity] = useState(1);
-  const [address] = useState<Address | null>(null);
+  const [shippingAddress] = useState<Address | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { t } = useTranslation("common");
+  
+  const { createOrder } = useMarketContract();
+  const { approve } = useTokenContract();
+  const { useAllowance } = useTokenQuery();
+  const { data: allowance } = useAllowance(address, MARKET_CONTRACT_ADDRESS);
 
   // 从模拟数据中查找商品，实际应该从API获取
   const product = mockProducts.find((p) => p.id === productId) || fallbackProduct;
@@ -80,17 +92,93 @@ export default function OrderConfirmPage() {
     });
   };
 
-  const loadingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const handleSubmit = () => {
-    showLoading(t("globalLoading.defaultMessage"));
-    if (loadingTimerRef.current) {
-      clearTimeout(loadingTimerRef.current);
+  const handleSubmit = async () => {
+    // 防止重复提交
+    if (isSubmitting) {
+      return;
     }
-    loadingTimerRef.current = setTimeout(() => {
+
+    if (!isConnected || !address) {
+      message.error(t("messages.connectWalletFirst"));
+      return;
+    }
+
+    // TODO: 从产品信息或API获取商家地址和订单ID
+    // 这里使用示例地址，实际应该从产品数据中获取
+    const merchantAddress = "0x0000000000000000000000000000000000000000" as const;
+    const orderId = BigInt(Date.now()); // 临时使用时间戳作为订单ID，实际应该从后端获取
+
+    setIsSubmitting(true);
+
+    try {
+      showLoading(t("loading.creatingOrder"));
+
+      // 计算总价（使用精确计算）
+      // 确保单价有足够的精度
+      const priceStr = unitPrice > 0 
+        ? unitPrice.toFixed(18).replace(/\.?0+$/, '')
+        : "0";
+      const priceWei = parseTokenAmount(priceStr);
+      const totalPriceWei = priceWei * BigInt(quantity);
+      
+      // 计算授权金额（添加10%缓冲，避免精度问题）
+      const approveAmount = (totalPriceWei * 110n) / 100n;
+      const needsApprove = needsApproval(
+        allowance && typeof allowance === 'bigint' ? allowance : undefined, 
+        totalPriceWei
+      );
+
+      // 1. 检查并授权代币
+      if (needsApprove) {
+        showLoading(t("loading.approving"));
+        // 使用格式化的总价字符串，确保精度
+        const approveAmountStr = formatTokenAmount(approveAmount, 18, 18);
+        const approveReceipt = await approve(MARKET_CONTRACT_ADDRESS, approveAmountStr);
+        
+        // 检查授权交易状态
+        if (approveReceipt.status === "success") {
+          message.success(t("messages.approveSuccess"));
+        } else {
+          throw new Error(t("messages.approveConfirmFailed"));
+        }
+      }
+
+      // 2. 创建订单，等待交易确认
+      showLoading(t("loading.creatingOrder"));
+      const receipt = await createOrder(
+        merchantAddress,
+        BigInt(quantity),
+        priceWei,
+        orderId
+      );
+
+      // 检查交易状态
+      if (receipt.status === "success") {
+        hideLoading();
+        setIsSubmitting(false);
+        message.success(t("messages.orderCreateSuccess"));
+        navigate(ROUTES.PAYMENT_SUCCESS);
+      } else {
+        throw new Error(t("messages.transactionFailed"));
+      }
+    } catch (error: any) {
+      console.error("创建订单失败:", error);
       hideLoading();
-      navigate(ROUTES.PAYMENT_SUCCESS);
-    }, 1200);
+      setIsSubmitting(false);
+      const errorMessage = error?.message || error?.shortMessage || t("messages.orderCreateFailed");
+      const errorStr = String(errorMessage).toLowerCase();
+      if (
+        errorStr.includes("rejected") ||
+        errorStr.includes("denied") ||
+        errorStr.includes("user rejected") ||
+        errorStr.includes("user cancelled") ||
+        errorStr.includes("user denied")
+      ) {
+        message.error(t("messages.transactionCancelled"));
+      } else {
+        message.error(errorMessage || t("messages.orderCreateFailed"));
+      }
+    }
   };
 
   return (
@@ -102,10 +190,10 @@ export default function OrderConfirmPage() {
             <button
               onClick={() => navigate(-1)}
               className="flex items-center justify-center z-10"
-              aria-label="返回"
+              aria-label={t("ariaLabels.back")}
               type="button"
             >
-              <img src={backSvg} alt="返回" className="w-5 h-5" />
+              <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
             </button>
             <div className="flex-1 text-center text-lg font-semibold text-slate-900">
               {t("checkout.title")}
@@ -117,9 +205,9 @@ export default function OrderConfirmPage() {
 
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
-        <div className="mt-6 space-y-4 px-4">
-        <section className="bg-white rounded-3xl p-5 shadow-sm">
-          {address ? (
+        <div className="space-y-4 px-4">
+        <section className="bg-white rounded-lg p-5 shadow-sm">
+          {shippingAddress ? (
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-10 h-10 rounded-full bg-slate-900 text-white flex items-center justify-center text-xl">
@@ -129,22 +217,22 @@ export default function OrderConfirmPage() {
                   <div className="text-sm text-slate-500">
                     {t("checkout.shippingAddress")}
                   </div>
-                  <div className="text-base font-semibold text-slate-900">{address.name}</div>
+                  <div className="text-base font-semibold text-slate-900">{shippingAddress.name}</div>
                 </div>
                 <button
                   onClick={() => navigate(ROUTES.ADDRESS_EDIT)}
                   className="text-slate-500 hover:text-slate-900 transition-colors"
                   type="button"
-                  aria-label="编辑地址"
+                  aria-label={t("ariaLabels.editAddress")}
                 >
                   <RightOutlined />
                 </button>
               </div>
               <div className="bg-slate-50 rounded-2xl p-4 space-y-1">
-                <Text className="block text-sm text-slate-900 leading-relaxed">{address.detail}</Text>
+                <Text className="block text-sm text-slate-900 leading-relaxed">{shippingAddress.detail}</Text>
                 <div className="flex items-center justify-between text-xs text-slate-500">
-                  <span>{address.tag}</span>
-                  <span>{address.phone}</span>
+                  <span>{shippingAddress.tag}</span>
+                  <span>{shippingAddress.phone}</span>
                 </div>
               </div>
             </div>
@@ -175,7 +263,7 @@ export default function OrderConfirmPage() {
           )}
         </section>
 
-        <section className="bg-white rounded-3xl p-5 shadow-sm space-y-4">
+        <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
           <Title level={5} className="!mb-0">
             {t("checkout.orderDetail")}
           </Title>
@@ -203,7 +291,7 @@ export default function OrderConfirmPage() {
                 onClick={() => handleQuantityChange(-1)}
                 disabled={quantity <= 1}
                 type="button"
-                aria-label="减少数量"
+                aria-label={t("ariaLabels.decreaseQuantity")}
               >
                 <MinusOutlined />
               </button>
@@ -213,7 +301,7 @@ export default function OrderConfirmPage() {
                 onClick={() => handleQuantityChange(1)}
                 disabled={quantity >= 99}
                 type="button"
-                aria-label="增加数量"
+                aria-label={t("ariaLabels.increaseQuantity")}
               >
                 <PlusOutlined />
               </button>
@@ -221,7 +309,7 @@ export default function OrderConfirmPage() {
           </div>
         </section>
 
-        <section className="bg-white rounded-3xl p-5 shadow-sm space-y-4">
+        <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
           <Title level={5} className="!mb-0">
             {t("checkout.payMethod")}
           </Title>
@@ -244,7 +332,7 @@ export default function OrderConfirmPage() {
                 </div>
               </div>
             </div>
-            <div className="w-5 h-5 rounded-full border-4 border-slate-900" aria-label="当前选中" />
+            <div className="w-5 h-5 rounded-full border-4 border-slate-900" aria-label={t("ariaLabels.currentlySelected")} />
           </div>
         </section>
         </div>
@@ -264,8 +352,14 @@ export default function OrderConfirmPage() {
             size="large"
             className="!bg-slate-900 !border-slate-900 w-40"
             onClick={handleSubmit}
+            loading={isSubmitting}
+            disabled={!isConnected || isSubmitting}
           >
-            {t("checkout.payNow")}
+            {!isConnected 
+              ? t("messages.connectWalletFirst")
+              : isSubmitting 
+              ? t("messages.processing")
+              : t("checkout.payNow")}
           </Button>
         </div>
       </div>

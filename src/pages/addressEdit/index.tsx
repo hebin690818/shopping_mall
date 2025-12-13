@@ -1,13 +1,111 @@
-import { Button, Card, Typography } from "antd";
+import { Button, Card, Typography, Form, Input, message } from "antd";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useState, useEffect } from "react";
 import backSvg from "@/assets/back.svg";
+import { api, type Address } from "../../lib/api";
+import { useGlobalLoading } from "../../contexts/LoadingProvider";
 
 const { Title, Text } = Typography;
 
 export default function AddressEditPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
+  const [searchParams] = useSearchParams();
+  const [form] = Form.useForm();
+  const { showLoading, hideLoading } = useGlobalLoading();
+  const [isLoading, setIsLoading] = useState(false);
+  const [addressId, setAddressId] = useState<number | null>(null);
+  const isEditMode = addressId !== null;
+
+  // 从URL参数获取地址ID
+  useEffect(() => {
+    const id = searchParams.get("id");
+    if (id) {
+      const parsedId = parseInt(id, 10);
+      if (!isNaN(parsedId)) {
+        setAddressId(parsedId);
+      }
+    }
+  }, [searchParams]);
+
+  // 如果是编辑模式，加载地址数据
+  useEffect(() => {
+    if (!isEditMode || !addressId) return;
+
+    let isMounted = true;
+
+    const loadAddress = async () => {
+      setIsLoading(true);
+      try {
+        const addresses = await api.getUserAddresses({ force: true });
+        const address = addresses.find((addr) => addr.id === addressId);
+        if (isMounted && address) {
+          form.setFieldsValue({
+            address: address.address,
+            phone: address.phone,
+            recipient_name: address.recipient_name,
+          });
+        } else if (isMounted) {
+          message.error(t("messages.loadFailed") || "加载地址失败");
+          navigate(-1);
+        }
+      } catch (error: any) {
+        if (error?.name === 'AbortError') {
+          return;
+        }
+        console.error("加载地址失败:", error);
+        if (isMounted) {
+          message.error(t("messages.loadFailed") || "加载地址失败");
+          navigate(-1);
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadAddress();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditMode, addressId, form, navigate, t]);
+
+  // 处理表单提交
+  const handleSubmit = async (values: {
+    address: string;
+    phone: string;
+    recipient_name: string;
+  }) => {
+    showLoading(
+      isEditMode
+        ? t("loading.updating") || "正在更新..."
+        : t("loading.creating") || "正在创建..."
+    );
+
+    try {
+      if (isEditMode && addressId) {
+        await api.updateAddress(addressId, values);
+        message.success(t("messages.updateSuccess") || "更新成功");
+      } else {
+        await api.createAddress(values);
+        message.success(t("messages.createSuccess") || "创建成功");
+      }
+      navigate(-1);
+    } catch (error: any) {
+      console.error("保存地址失败:", error);
+      message.error(
+        error?.message ||
+          (isEditMode
+            ? t("messages.updateFailed") || "更新失败"
+            : t("messages.createFailed") || "创建失败")
+      );
+    } finally {
+      hideLoading();
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#f5f5f8] pb-20">
@@ -17,54 +115,104 @@ export default function AddressEditPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            aria-label="返回"
+            aria-label={t("ariaLabels.back")}
             className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <img src={backSvg} alt="返回" className="w-5 h-5" />
+            <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
           </button>
-          <Title level={4} className="!mb-0">
-            {t("addressEdit.title")}
+          <Title level={5} className="!mb-0">
+            {isEditMode
+              ? t("addressEdit.editTitle") || t("addressEdit.title")
+              : t("addressEdit.addTitle") || t("addressEdit.title")}
           </Title>
         </div>
       </div>
 
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
-        <div className="px-4 mt-4">
-          <Card className="!rounded-3xl shadow-sm !p-0 overflow-hidden">
-            <div className="px-4 py-4 space-y-0.5">
-              {/* 地址 */}
-              <div className="flex items-start justify-between py-2">
-                <Text className="text-sm font-medium text-slate-900">
-                  {t("addressEdit.address")}
-                </Text>
-                <Text className="w-56 text-right text-xs text-slate-500 leading-relaxed">
-                  {t("addressEdit.addressPlaceholder")}
-                </Text>
-              </div>
-              <div className="h-px bg-slate-100 -mx-4" />
-
+        <div className="px-4">
+          <Card className="!rounded-lg shadow-sm">
+            <Form
+              form={form}
+              layout="vertical"
+              onFinish={handleSubmit}
+              initialValues={{
+                address: "",
+                phone: "",
+                recipient_name: "",
+              }}
+            >
               {/* 收件人 */}
-              <div className="flex items-center justify-between py-2">
-                <Text className="text-sm font-medium text-slate-900">
-                  {t("addressEdit.receiver")}
-                </Text>
-                <Text className="text-sm text-slate-500">
-                  {t("addressEdit.receiverPlaceholder")}
-                </Text>
-              </div>
-              <div className="h-px bg-slate-100 -mx-4" />
+              <Form.Item
+                name="recipient_name"
+                label={
+                  <Text className="text-sm font-medium text-slate-900">
+                    {t("addressEdit.receiver")}
+                  </Text>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: t("addressEdit.receiverRequired") || "请输入收件人姓名",
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={t("addressEdit.receiverPlaceholder")}
+                  className="!border-0 !border-b !rounded-none !px-0 !pb-3"
+                  disabled={isLoading}
+                />
+              </Form.Item>
 
               {/* 联系电话 */}
-              <div className="flex items-center justify-between py-2">
-                <Text className="text-sm font-medium text-slate-900">
-                  {t("addressEdit.phone")}
-                </Text>
-                <Text className="text-sm text-slate-500">
-                  {t("addressEdit.phonePlaceholder")}
-                </Text>
-              </div>
-            </div>
+              <Form.Item
+                name="phone"
+                label={
+                  <Text className="text-sm font-medium text-slate-900">
+                    {t("addressEdit.phone")}
+                  </Text>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: t("addressEdit.phoneRequired") || "请输入联系电话",
+                  },
+                  {
+                    pattern: /^[\d\s\-+()]+$/,
+                    message: t("addressEdit.phoneInvalid") || "请输入有效的电话号码",
+                  },
+                ]}
+              >
+                <Input
+                  placeholder={t("addressEdit.phonePlaceholder")}
+                  className="!border-0 !border-b !rounded-none !px-0 !pb-3"
+                  disabled={isLoading}
+                />
+              </Form.Item>
+
+              {/* 地址 */}
+              <Form.Item
+                name="address"
+                label={
+                  <Text className="text-sm font-medium text-slate-900">
+                    {t("addressEdit.address")}
+                  </Text>
+                }
+                rules={[
+                  {
+                    required: true,
+                    message: t("addressEdit.addressRequired") || "请输入收货地址",
+                  },
+                ]}
+              >
+                <Input.TextArea
+                  placeholder={t("addressEdit.addressPlaceholder")}
+                  autoSize={{ minRows: 3, maxRows: 6 }}
+                  className="min-h-[96px] rounded-2xl bg-slate-50 border border-slate-100 px-3 py-2"
+                  disabled={isLoading}
+                />
+              </Form.Item>
+            </Form>
           </Card>
         </div>
       </div>
@@ -76,6 +224,8 @@ export default function AddressEditPage() {
           block
           shape="round"
           className="!bg-slate-900 !border-slate-900 h-12"
+          onClick={() => form.submit()}
+          loading={isLoading}
         >
           {t("common.save")}
         </Button>

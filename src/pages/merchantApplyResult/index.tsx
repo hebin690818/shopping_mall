@@ -21,12 +21,12 @@ export default function MerchantApplyResultPage() {
           <button
             type="button"
             onClick={() => navigate(ROUTES.MERCHANT)}
-            aria-label="返回"
+            aria-label={t("ariaLabels.back")}
             className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <img src={backSvg} alt="返回" className="w-5 h-5" />
+            <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
           </button>
-          <Title level={4} className="!mb-0">
+          <Title level={5} className="!mb-0">
             {t("merchantApplyResult.title")}
           </Title>
         </div>
@@ -36,7 +36,7 @@ export default function MerchantApplyResultPage() {
       <div className="pt-20">
         {/* 结果卡片 */}
         <div className="px-4">
-        <div className="bg-white rounded-3xl shadow-sm px-4 py-10 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-sm px-4 py-10 flex items-center justify-center">
           <div className="flex items-center gap-3">
             {isSuccess ? (
               <CheckCircleTwoTone twoToneColor="#22c55e" className="!text-2xl" />

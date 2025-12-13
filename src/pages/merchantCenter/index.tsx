@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
-import { Button, Typography } from "antd";
+import { Button, Typography, Spin, message } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../routes";
 import product from "@/assets/product.png";
 import backSvg from "@/assets/back.svg";
+import { api, type Product } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 
 const { Title, Text } = Typography;
 
@@ -16,37 +18,16 @@ export type MerchantProduct = {
   price: string;
   stock: number;
   status: ProductStatus;
+  image?: string;
 };
-
-const initialProducts: MerchantProduct[] = [
-  {
-    id: "1",
-    name: "无线蓝牙耳机 Pro",
-    price: "299.99",
-    stock: 100,
-    status: "on",
-  },
-  {
-    id: "2",
-    name: "无线蓝牙耳机 Pro",
-    price: "299.99",
-    stock: 100,
-    status: "off",
-  },
-  {
-    id: "3",
-    name: "无线蓝牙耳机 Pro",
-    price: "299.99",
-    stock: 100,
-    status: "off",
-  },
-];
 
 export default function MerchantCenterPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
+  const { address } = useAuth();
   const [activeTab, setActiveTab] = useState<"all" | "on" | "off">("on");
-  const [products, setProducts] = useState<MerchantProduct[]>(initialProducts);
+  const [products, setProducts] = useState<MerchantProduct[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const filteredProducts = products.filter((p) => {
     if (activeTab === "all") return true;
@@ -62,6 +43,88 @@ export default function MerchantCenterPage() {
     );
   };
 
+  // 将API返回的Product转换为MerchantProduct
+  const mapProductToMerchantProduct = (product: Product): MerchantProduct => {
+    return {
+      id: String(product.id),
+      name: product.name,
+      price: product.price,
+      stock: (product as any).stock ?? 0,
+      status: ((product as any).status === "on" || (product as any).status === true) ? "on" : "off",
+      image: product.image,
+    };
+  };
+
+  // 加载商品列表
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadProducts = async () => {
+      if (!address) {
+        if (isMounted) {
+          setProducts([]);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setLoading(true);
+      }
+
+      try {
+        // 先获取商家ID
+        const merchantId = await api.getMerchantByWallet(address);
+        
+        if (!isMounted) return;
+
+        if (!merchantId) {
+          // 如果不是商家，商品列表为空
+          if (isMounted) {
+            setProducts([]);
+          }
+          return;
+        }
+
+        // 获取该商家的商品列表
+        const response = await api.getProducts({
+          merchant_id: merchantId,
+          page: 1,
+          page_size: 100, // 获取足够多的商品
+        });
+
+        if (!isMounted) return;
+
+        // 将API返回的商品转换为MerchantProduct格式
+        const merchantProducts = response.data.map(mapProductToMerchantProduct);
+        if (isMounted) {
+          setProducts(merchantProducts);
+        }
+      } catch (error: any) {
+        // 如果是取消的请求，不更新状态
+        if (error?.name === 'AbortError') {
+          return;
+        }
+        console.error("加载商品列表失败:", error);
+        // 只在组件仍挂载时显示错误消息，避免重复提示
+        if (isMounted) {
+          message.error(error.message || "加载商品列表失败");
+          setProducts([]);
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadProducts();
+
+    // 清理函数：组件卸载时清理
+    return () => {
+      isMounted = false;
+    };
+  }, [address]);
+
   // 标签切换时滚动到顶部
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -74,13 +137,13 @@ export default function MerchantCenterPage() {
         <div className="relative flex items-center justify-center p-4">
           <button
             type="button"
-            onClick={() => navigate(ROUTES.PROFILE)}
-            aria-label="返回"
+            onClick={() => navigate(-1)}
+            aria-label={t("ariaLabels.back")}
             className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <img src={backSvg} alt="返回" className="w-5 h-5" />
+            <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
           </button>
-          <Title level={4} className="!mb-0">
+          <Title level={5} className="!mb-0">
             {t("merchantCenter.title")}
           </Title>
         </div>
@@ -126,16 +189,25 @@ export default function MerchantCenterPage() {
       <div className="pt-[120px]">
         {/* 商品列表 */}
         <div className="px-4 py-4 space-y-4">
-          {filteredProducts.map((item) => {
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Spin size="large" />
+            </div>
+          ) : filteredProducts.length === 0 ? (
+            <div className="flex justify-center items-center py-20">
+              <Text className="text-slate-400">{t("merchantCenter.noProducts")}</Text>
+            </div>
+          ) : (
+            filteredProducts.map((item) => {
             const isOn = item.status === "on";
             return (
               <div
                 key={item.id}
-                className="bg-white rounded-3xl shadow-sm p-4 flex flex-col gap-3"
+                className="bg-white rounded-lg shadow-sm p-4 flex flex-col gap-3"
               >
                 <div className="flex gap-3">
                   <img
-                    src={product}
+                    src={item.image || product}
                     alt={item.name}
                     className="w-20 h-20 rounded-2xl object-cover"
                   />
@@ -185,7 +257,8 @@ export default function MerchantCenterPage() {
                 </div>
               </div>
             );
-          })}
+          })
+          )}
         </div>
       </div>
     </div>

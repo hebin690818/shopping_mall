@@ -4,6 +4,16 @@ import { useTranslation } from "react-i18next";
 import { useConnection } from "wagmi";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../routes";
+import {
+  useRewardContract,
+  useRewardQuery,
+} from "../../hooks/useRewardContract";
+import { useTokenQuery } from "../../hooks/useTokenContract";
+import { useGlobalLoading } from "../../contexts/LoadingProvider";
+import {
+  formatTokenAmount,
+  calculatePercentage,
+} from "../../lib/contractUtils";
 import { CopyOutlined, RightOutlined } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
@@ -11,8 +21,19 @@ const { Text, Title } = Typography;
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
-  const { address } = useConnection();
+  const { address, isConnected } = useConnection();
+  const { showLoading, hideLoading } = useGlobalLoading();
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isClaiming, setIsClaiming] = useState(false);
+
+  const { claim } = useRewardContract();
+  const { usePendingReward, useUserPower } = useRewardQuery();
+  const { useBalance } = useTokenQuery();
+
+  // 查询合约数据
+  const { data: pendingReward } = usePendingReward(address);
+  const { data: userPower } = useUserPower(address);
+  const { data: balance } = useBalance(address);
 
   const formatAddress = (addr: string | undefined) => {
     if (!addr) return "";
@@ -26,12 +47,81 @@ export default function ProfilePage() {
     }
   };
 
-  // 模拟数据
-  const balance = "1234.56";
-  const consumptionPower = "100.00";
-  const tokenHoldings = "1,0000";
-  const dividendAmount = "1234.56";
-  const dividendProgress = 60;
+  // 处理领取奖励
+  const handleClaim = async () => {
+    if (isClaiming) {
+      return;
+    }
+
+    if (!isConnected || !address) {
+      message.error(t("messages.connectWalletFirst"));
+      return;
+    }
+
+    if (
+      !pendingReward ||
+      (typeof pendingReward === "bigint" && pendingReward === 0n)
+    ) {
+      message.warning(t("messages.noRewardAvailable"));
+      return;
+    }
+
+    setIsClaiming(true);
+
+    try {
+      showLoading(t("loading.claimingReward"));
+      const receipt = await claim();
+      
+      // 检查交易状态
+      if (receipt.status === "success") {
+        hideLoading();
+        setIsClaiming(false);
+        message.success(t("messages.claimSuccess"));
+        // 刷新数据
+        window.location.reload();
+      } else {
+        throw new Error(t("messages.transactionFailed"));
+      }
+    } catch (error: any) {
+      console.error("领取奖励失败:", error);
+      hideLoading();
+      setIsClaiming(false);
+      const errorMessage = error?.message || error?.shortMessage || t("messages.claimFailed");
+      const errorStr = String(errorMessage).toLowerCase();
+      if (
+        errorStr.includes("rejected") ||
+        errorStr.includes("denied") ||
+        errorStr.includes("user rejected") ||
+        errorStr.includes("user cancelled") ||
+        errorStr.includes("user denied")
+      ) {
+        message.error(t("messages.transactionCancelled"));
+      } else {
+        message.error(errorMessage || t("messages.claimFailed"));
+      }
+    }
+  };
+
+  // 格式化数据
+  const formattedBalance =
+    balance && typeof balance === "bigint"
+      ? formatTokenAmount(balance)
+      : "0.00";
+  const consumptionPower =
+    userPower && typeof userPower === "bigint"
+      ? formatTokenAmount(userPower)
+      : "0.00";
+  const dividendAmount =
+    pendingReward && typeof pendingReward === "bigint"
+      ? formatTokenAmount(pendingReward)
+      : "0.00";
+  const dividendProgress =
+    userPower &&
+    pendingReward &&
+    typeof userPower === "bigint" &&
+    typeof pendingReward === "bigint"
+      ? Math.min(100, calculatePercentage(pendingReward, userPower))
+      : 0;
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -39,8 +129,8 @@ export default function ProfilePage() {
       setIsScrolled(window.scrollY > 10);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
@@ -57,19 +147,19 @@ export default function ProfilePage() {
       {/* Fixed Header */}
       <div
         className="fixed top-0 left-0 right-0 z-50 p-4 shadow-sm transition-all duration-300"
-        style={{ 
-          background: isScrolled ? 'rgba(200, 223, 247, 0.8)' : 'transparent',
-          backdropFilter: isScrolled ? 'blur(10px)' : 'none',
+        style={{
+          background: isScrolled ? "rgba(200, 223, 247, 0.8)" : "transparent",
+          backdropFilter: isScrolled ? "blur(10px)" : "none",
         }}
       >
-        <Title level={4} className="!text-black !mb-0">
+        <Title level={5} className="!text-black !mb-0">
           {t("profile.title")}
         </Title>
       </div>
 
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
-        <div className="px-4 py-4 space-y-4">
+        <div className="px-4 space-y-4">
           {/* User Profile Card */}
           <Card className="!rounded-xl shadow-sm">
             <div className="flex items-center gap-4">
@@ -105,7 +195,7 @@ export default function ProfilePage() {
               </Title>
               <div>
                 <Text className="text-3xl font-bold text-slate-900">
-                  {t("profile.assets.balance", { value: balance })}
+                  {t("profile.assets.balance", { value: formattedBalance })}
                 </Text>
               </div>
               <div className="flex gap-6">
@@ -121,7 +211,9 @@ export default function ProfilePage() {
                   <Text className="text-xs text-slate-500 block mb-1">
                     {t("profile.assets.tokenHoldings")}
                   </Text>
-                  <Text className="text-sm font-semibold">{tokenHoldings}</Text>
+                  <Text className="text-sm font-semibold">
+                    {formattedBalance}
+                  </Text>
                 </div>
               </div>
               <div className="pt-3 border-t border-slate-100">
@@ -150,6 +242,16 @@ export default function ProfilePage() {
                 <Button
                   type="primary"
                   className="!rounded-full !bg-slate-800 !border-slate-800"
+                  onClick={handleClaim}
+                  loading={isClaiming}
+                  disabled={
+                    !isConnected ||
+                    !pendingReward ||
+                    (typeof pendingReward === "bigint" && pendingReward === 0n)
+                  }
+                  style={{
+                    color: "#fff !important",
+                  }}
                 >
                   {t("profile.dividend.claim")}
                 </Button>

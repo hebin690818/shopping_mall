@@ -45,3 +45,94 @@ html::-webkit-scrollbar {
 .ant-card-body {
   padding: 16px !important;
 }
+
+.ant-btn:disabled,
+.ant-btn.ant-btn-disabled {
+  color: rgba(255, 255, 255, 0.8) !important;
+}
+
+/* 移除所有输入框的聚焦高亮 */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* 移除 Ant Design 输入框的聚焦高亮 */
+.ant-input:focus,
+.ant-input-focused,
+.ant-input-affix-wrapper:focus,
+.ant-input-affix-wrapper-focused,
+.ant-input-number:focus,
+.ant-input-number-focused,
+.ant-select:focus,
+.ant-select-focused,
+.ant-select-selector:focus,
+.ant-picker:focus,
+.ant-picker-focused {
+  outline: none !important;
+  box-shadow: none !important;
+  border-color: inherit !important;
+}
+
+/* 移除 Ant Design 输入框聚焦时的边框颜色变化 */
+.ant-input-affix-wrapper-focused,
+.ant-input-number-focused .ant-input-number-input:focus,
+.ant-select-focused .ant-select-selector,
+.ant-picker-focused {
+  border-color: inherit !important;
+}
+
+/* 移除浏览器自动填充的黄色背景和记忆功能视觉效果 */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active,
+select:-webkit-autofill,
+select:-webkit-autofill:hover,
+select:-webkit-autofill:focus,
+select:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: inherit !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* Ant Design 输入框移除自动填充的视觉效果 */
+.ant-input:-webkit-autofill,
+.ant-input:-webkit-autofill:hover,
+.ant-input:-webkit-autofill:focus,
+.ant-input:-webkit-autofill:active,
+.ant-input-affix-wrapper .ant-input:-webkit-autofill,
+.ant-input-affix-wrapper .ant-input:-webkit-autofill:hover,
+.ant-input-affix-wrapper .ant-input:-webkit-autofill:focus,
+.ant-input-affix-wrapper .ant-input:-webkit-autofill:active,
+.ant-input-number-input:-webkit-autofill,
+.ant-input-number-input:-webkit-autofill:hover,
+.ant-input-number-input:-webkit-autofill:focus,
+.ant-input-number-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px white inset !important;
+  -webkit-text-fill-color: inherit !important;
+  transition: background-color 5000s ease-in-out 0s;
+}
+
+/* 图片上传组件样式优化 */
+.upload-wrapper .ant-upload-select {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}
+
+.upload-wrapper .ant-upload-select-picture-card {
+  width: 100% !important;
+  height: 100% !important;
+  margin: 0 !important;
+  border: none !important;
+  background: transparent !important;
+}

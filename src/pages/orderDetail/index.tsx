@@ -1,8 +1,13 @@
+import { useState } from "react";
 import { Typography, Button, message } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
+import { useConnection } from "wagmi";
 import { CopyOutlined, CarOutlined } from "@ant-design/icons";
+import { useMarketContract, useMarketQuery } from "../../hooks/useMarketContract";
+import { useGlobalLoading } from "../../contexts/LoadingProvider";
 import { type Order } from "../orders";
+import { OrderStatus } from "../../lib/contractUtils";
 import product from "@/assets/product.png";
 import backSvg from "@/assets/back.svg";
 
@@ -68,17 +73,191 @@ export default function OrderDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t } = useTranslation("common");
+  const { address, isConnected } = useConnection();
+  const { showLoading, hideLoading } = useGlobalLoading();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const { confirmReceived, refundOrder } = useMarketContract();
+  const { useOrderDetails } = useMarketQuery();
+
+  // 尝试从合约查询订单（如果id是订单索引）
+  const orderIndex = id ? (isNaN(Number(id)) ? null : BigInt(id)) : null;
+  const { data: contractOrder } = useOrderDetails(orderIndex || 0n, !!orderIndex) as {
+    data?: {
+      orderId: bigint;
+      buyer: string;
+      merchant: string;
+      amount: bigint;
+      price: bigint;
+      totalPrice: bigint;
+      status: number;
+    };
+  };
 
   // 从模拟数据中查找订单，实际应该从API获取
-  const order = mockOrders.find((o) => o.id === id);
+  const mockOrder = mockOrders.find((o) => o.id === id);
+  
+  // 优先使用合约订单数据，转换为统一格式
+  const order: Order & { 
+    contractOrder?: {
+      orderId: bigint;
+      buyer: string;
+      merchant: string;
+      amount: bigint;
+      price: bigint;
+      totalPrice: bigint;
+      status: number;
+    };
+  } = contractOrder ? {
+    id: id || '',
+    orderNumber: `ORD-${orderIndex}`,
+    date: new Date().toISOString().split('T')[0],
+    status: contractOrder.status === OrderStatus.Pending ? 'pending' 
+      : contractOrder.status === OrderStatus.Completed ? 'completed' 
+      : 'pending', // 退款状态也显示为pending，因为Order类型中没有refunded
+    product: {
+      image: product,
+      name: t("orderDetail.productPlaceholder"),
+      store: t("orderDetail.merchantPlaceholder"),
+      price: contractOrder.price.toString(),
+      quantity: Number(contractOrder.amount),
+    },
+    total: contractOrder.totalPrice.toString(),
+    paymentAmount: contractOrder.totalPrice.toString(),
+    contractOrder: {
+      orderId: contractOrder.orderId,
+      buyer: contractOrder.buyer,
+      merchant: contractOrder.merchant,
+      amount: contractOrder.amount,
+      price: contractOrder.price,
+      totalPrice: contractOrder.totalPrice,
+      status: contractOrder.status,
+    },
+  } : (mockOrder || {
+    id: id || '',
+    orderNumber: '',
+    date: '',
+    status: 'pending' as const,
+    product: {
+      image: product,
+      name: '',
+      store: '',
+      price: '0',
+      quantity: 0,
+    },
+    total: '0',
+  });
   
   if (!order) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Text>订单不存在</Text>
+        <Text>{t("orderDetail.orderNotFound")}</Text>
       </div>
     );
   }
+
+  // 处理确认收货
+  const handleConfirmReceived = async () => {
+    if (isProcessing) {
+      return;
+    }
+
+    if (!isConnected || !address) {
+      message.error(t("messages.connectWalletFirst"));
+      return;
+    }
+
+    if (!orderIndex) {
+      message.error(t("messages.invalidOrderIndex"));
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      showLoading(t("loading.confirmingReceipt"));
+      const receipt = await confirmReceived(orderIndex);
+      
+      // 检查交易状态
+      if (receipt.status === "success") {
+        hideLoading();
+        setIsProcessing(false);
+        message.success(t("messages.confirmSuccess"));
+        // 刷新页面或更新订单状态
+        window.location.reload();
+      } else {
+        throw new Error(t("messages.transactionFailed"));
+      }
+    } catch (error: any) {
+      console.error("确认收货失败:", error);
+      hideLoading();
+      setIsProcessing(false);
+      const errorMessage = error?.message || error?.shortMessage || t("messages.confirmFailed");
+      const errorStr = String(errorMessage).toLowerCase();
+      if (
+        errorStr.includes("rejected") ||
+        errorStr.includes("denied") ||
+        errorStr.includes("user rejected") ||
+        errorStr.includes("user cancelled") ||
+        errorStr.includes("user denied")
+      ) {
+        message.error(t("messages.transactionCancelled"));
+      } else {
+        message.error(errorMessage);
+      }
+    }
+  };
+
+  // 处理退款
+  const handleRefund = async () => {
+    if (isProcessing) {
+      return;
+    }
+
+    if (!isConnected || !address) {
+      message.error(t("messages.connectWalletFirst"));
+      return;
+    }
+
+    if (!orderIndex) {
+      message.error(t("messages.invalidOrderIndex"));
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      showLoading(t("loading.processingRefund"));
+      const receipt = await refundOrder(orderIndex);
+      
+      // 检查交易状态
+      if (receipt.status === "success") {
+        hideLoading();
+        setIsProcessing(false);
+        message.success(t("messages.refundSuccess"));
+        // 刷新页面或更新订单状态
+        window.location.reload();
+      } else {
+        throw new Error(t("messages.transactionFailed"));
+      }
+    } catch (error: any) {
+      console.error("退款失败:", error);
+      hideLoading();
+      setIsProcessing(false);
+      const errorMessage = error?.message || error?.shortMessage || t("messages.refundFailed");
+      const errorStr = String(errorMessage).toLowerCase();
+      if (
+        errorStr.includes("rejected") ||
+        errorStr.includes("denied") ||
+        errorStr.includes("user rejected") ||
+        errorStr.includes("user cancelled") ||
+        errorStr.includes("user denied")
+      ) {
+        message.error(t("messages.transactionCancelled"));
+      } else {
+        message.error(errorMessage);
+      }
+    }
+  };
 
   const handleCopyOrderNumber = async () => {
     try {
@@ -86,7 +265,7 @@ export default function OrderDetailPage() {
       message.success(t("profile.copy"));
     } catch (err) {
       console.error("复制失败:", err);
-      message.error("复制失败");
+      message.error(t("messages.copyFailed"));
     }
   };
 
@@ -136,12 +315,12 @@ export default function OrderDetailPage() {
           <button
             type="button"
             onClick={() => navigate(-1)}
-            aria-label="返回"
+            aria-label={t("ariaLabels.back")}
             className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <img src={backSvg} alt="返回" className="w-5 h-5" />
+            <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
           </button>
-          <Title level={4} className="!mb-0">
+          <Title level={5} className="!mb-0">
             {t("orderDetail.title")}
           </Title>
         </div>
@@ -150,7 +329,7 @@ export default function OrderDetailPage() {
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20 px-4 py-4">
         {/* Order Details Card */}
-        <div className="bg-white rounded-3xl shadow-sm overflow-hidden">
+        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           <div className="p-4 space-y-4">
             {/* Order ID and Status Section */}
             <div className="flex items-center justify-between">
@@ -162,7 +341,7 @@ export default function OrderDetailPage() {
                   type="button"
                   onClick={handleCopyOrderNumber}
                   className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
-                  aria-label="复制订单号"
+                  aria-label={t("ariaLabels.copyOrderNumber")}
                 >
                   <CopyOutlined className="text-xs" />
                 </button>
@@ -249,6 +428,39 @@ export default function OrderDetailPage() {
             )}
           </div>
         </div>
+
+        {/* 操作按钮区域 */}
+        {orderIndex && order.status === 'pending' && order.contractOrder && (
+          <div className="mt-4 px-4 space-y-3">
+            {order.contractOrder.buyer?.toLowerCase() === address?.toLowerCase() && (
+              <Button
+                type="primary"
+                block
+                size="large"
+                shape="round"
+                className="!bg-slate-900 !border-slate-900"
+                onClick={handleConfirmReceived}
+                loading={isProcessing}
+                disabled={!isConnected}
+              >
+                {t("orderDetail.confirmReceipt")}
+              </Button>
+            )}
+            {order.contractOrder.merchant?.toLowerCase() === address?.toLowerCase() && (
+              <Button
+                block
+                size="large"
+                shape="round"
+                danger
+                onClick={handleRefund}
+                loading={isProcessing}
+                disabled={!isConnected}
+              >
+                {t("orderDetail.refundToBuyer")}
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

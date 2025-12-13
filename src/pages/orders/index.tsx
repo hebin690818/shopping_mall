@@ -1,13 +1,17 @@
-import { useState, useEffect } from "react";
-import { Button, Typography } from "antd";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { Button, Typography, message } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
+import { useConnection } from "wagmi";
 import { ROUTES } from "../../routes";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
   CarOutlined,
 } from "@ant-design/icons";
+import { useMarketContract, useMarketQuery } from "../../hooks/useMarketContract";
+import { useGlobalLoading } from "../../contexts/LoadingProvider";
+import { api, type OrderAPI, type OrderStatusAPI } from "../../lib/api";
 import product from "@/assets/product.png";
 
 const { Text, Title } = Typography;
@@ -32,68 +36,74 @@ export type Order = {
   logisticsNumber?: string;
   shippingTime?: string;
   paymentTime?: string;
+  orderIndex?: bigint; // 合约订单索引
 };
 
-const mockOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2024-001",
-    date: "2024-11-20",
-    status: "completed",
+// 将API订单状态映射到前端订单状态
+const mapApiStatusToOrderStatus = (apiStatus: OrderStatusAPI): OrderStatus => {
+  switch (apiStatus) {
+    case "pending":
+      return "pending";
+    case "shipped":
+      return "delivering";
+    case "completed":
+      return "completed";
+    case "refund_requested":
+    case "refunded":
+      // 退款相关状态可以显示为已完成，或者可以添加新的状态
+      return "completed";
+    default:
+      return "pending";
+  }
+};
+
+// 将API订单数据转换为前端订单格式
+const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
+  const productData = apiOrder.product || {};
+  
+  return {
+    id: String(apiOrder.id || ""),
+    orderNumber: apiOrder.order_number || apiOrder.orderNumber || `ORD-${apiOrder.id}`,
+    date: apiOrder.date || apiOrder.created_at?.split("T")[0] || "",
+    status: mapApiStatusToOrderStatus(apiOrder.status),
     product: {
-      image: product,
-      name: "无线蓝牙耳机 Pro",
-      store: "科技数码旗舰店",
-      price: "299.99",
-      quantity: 1,
+      image: productData.image || productData.image_url || product,
+      name: productData.name || "",
+      store: productData.store || productData.merchant_name || "",
+      price: String(productData.price || "0"),
+      quantity: productData.quantity || 1,
     },
-    total: "299.99",
-    paymentAmount: "299.99",
-    logisticsCompany: "韵达快递",
-    logisticsNumber: "12345667890890890",
-    shippingTime: "2025-05-05",
-    paymentTime: "2025-05-05",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2024-002",
-    date: "2024-11-22",
-    status: "delivering",
-    product: {
-      image: product,
-      name: "智能运动手环",
-      store: "科技数码旗舰店",
-      price: "299.99",
-      quantity: 1,
-    },
-    total: "299.99",
-    paymentAmount: "123.00",
-    logisticsCompany: "韵达快递",
-    logisticsNumber: "12345667890890890",
-    shippingTime: "2025-05-05",
-    paymentTime: "2025-05-05",
-  },
-  {
-    id: "3",
-    orderNumber: "ORD-2024-003",
-    date: "2024-11-24",
-    status: "pending",
-    product: {
-      image: product,
-      name: "便携式蓝牙音箱",
-      store: "科技数码旗舰店",
-      price: "299.99",
-      quantity: 1,
-    },
-    total: "299.99",
-  },
-];
+    total: String(apiOrder.total || "0"),
+    paymentAmount: apiOrder.payment_amount 
+      ? String(apiOrder.payment_amount) 
+      : apiOrder.paymentAmount 
+        ? String(apiOrder.paymentAmount)
+        : undefined,
+    logisticsCompany: apiOrder.logistics_company || apiOrder.logisticsCompany,
+    logisticsNumber: apiOrder.logistics_number || apiOrder.logisticsNumber,
+    shippingTime: apiOrder.shipping_time || apiOrder.shippingTime,
+    paymentTime: apiOrder.payment_time || apiOrder.paymentTime,
+    orderIndex: apiOrder.order_index 
+      ? BigInt(apiOrder.order_index) 
+      : apiOrder.orderIndex 
+        ? (typeof apiOrder.orderIndex === "string" ? BigInt(apiOrder.orderIndex) : BigInt(apiOrder.orderIndex))
+        : undefined,
+  };
+};
 
 export default function OrdersPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
+  const { address, isConnected } = useConnection();
+  const { confirmReceived } = useMarketContract();
+  const { showLoading, hideLoading } = useGlobalLoading();
+  const { useOrderCount } = useMarketQuery();
+  const { data: orderCount } = useOrderCount();
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isScrolled, setIsScrolled] = useState(false);
+  const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [isLoadingOrders, setIsLoadingOrders] = useState(false);
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -109,6 +119,88 @@ export default function OrdersPage() {
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeTab]);
+
+  // 加载状态标记
+  const loadingRef = useRef(false); // 防止重复请求
+  const errorShownRef = useRef(false); // 防止重复显示错误
+
+  // 加载订单列表的函数
+  const loadOrders = useCallback(async () => {
+    if (!address) {
+      setOrders([]);
+      return;
+    }
+
+    // 防止重复请求
+    if (loadingRef.current) {
+      return;
+    }
+
+    loadingRef.current = true;
+    errorShownRef.current = false; // 重置错误标记
+    setIsLoadingOrders(true);
+    
+    try {
+      // 根据当前选中的标签确定状态筛选
+      let status: OrderStatusAPI | undefined;
+      if (activeTab === "pending") {
+        status = "pending";
+      } else if (activeTab === "delivering") {
+        status = "shipped";
+      } else if (activeTab === "completed") {
+        status = "completed";
+      }
+      // activeTab === "all" 时不传status参数，获取所有订单
+
+      // API层已经有去重机制，这里不需要额外的loadingRef
+      const response = await api.getBuyerOrders({
+        buyer_address: address,
+        page: 1,
+        page_size: 100, // 可以根据需要调整分页
+        status: status,
+      });
+
+      // 将API订单转换为前端订单格式
+      const mappedOrders = response.data.map(mapApiOrderToOrder);
+      setOrders(mappedOrders);
+      errorShownRef.current = false; // 请求成功，重置错误标记
+    } catch (error: any) {
+      // 如果是取消的请求，不显示错误
+      if (error?.name === 'AbortError') {
+        loadingRef.current = false;
+        return;
+      }
+      console.error("加载订单失败:", error);
+      // 只显示一次错误消息
+      if (!errorShownRef.current) {
+        errorShownRef.current = true;
+        message.error(t("messages.loadFailed") || "加载订单失败");
+      }
+      setOrders([]);
+    } finally {
+      setIsLoadingOrders(false);
+      loadingRef.current = false;
+    }
+  }, [address, activeTab, t]);
+
+  // 加载订单列表
+  useEffect(() => {
+    let isMounted = true;
+    
+    const fetchOrders = async () => {
+      if (isMounted) {
+        await loadOrders();
+      }
+    };
+
+    fetchOrders();
+
+    // 组件卸载时清理
+    return () => {
+      isMounted = false;
+      loadingRef.current = false;
+    };
+  }, [loadOrders]);
 
   const getStatusButton = (status: OrderStatus) => {
     switch (status) {
@@ -148,13 +240,87 @@ export default function OrdersPage() {
     }
   };
 
-  const filteredOrders = mockOrders.filter((order) => {
+  // 由于API已经根据状态筛选，这里直接使用orders
+  // 但为了保险起见，仍然在前端再做一次筛选
+  const filteredOrders = orders.filter((order) => {
     if (activeTab === "all") return true;
     if (activeTab === "completed") return order.status === "completed";
     if (activeTab === "delivering") return order.status === "delivering";
     if (activeTab === "pending") return order.status === "pending";
     return true;
   });
+
+  // 处理确认收货
+  const handleConfirmReceived = async (order: Order) => {
+    if (processingOrderId === order.id) {
+      return;
+    }
+
+    if (!isConnected || !address) {
+      message.error(t("messages.connectWalletFirst"));
+      return;
+    }
+
+    // 尝试从订单获取 orderIndex
+    // 如果订单有 orderIndex，直接使用；否则尝试将 id 转换为 orderIndex
+    let orderIndex: bigint | null = null;
+    
+    if (order.orderIndex) {
+      orderIndex = order.orderIndex;
+    } else if (order.id && !isNaN(Number(order.id))) {
+      orderIndex = BigInt(order.id);
+    } else {
+      message.error(t("messages.invalidOrderIndex"));
+      return;
+    }
+
+    setProcessingOrderId(order.id);
+
+    try {
+      showLoading(t("loading.confirmingReceipt"));
+      const receipt = await confirmReceived(orderIndex);
+      
+      // 检查交易状态
+      if (receipt.status === "success") {
+        hideLoading();
+        setProcessingOrderId(null);
+        message.success(t("messages.confirmSuccess"));
+        // 重新加载订单列表（强制刷新，清除缓存）
+        await api.getBuyerOrders({
+          buyer_address: address!,
+          page: 1,
+          page_size: 100,
+          status: activeTab === "pending" ? "pending" 
+            : activeTab === "delivering" ? "shipped"
+            : activeTab === "completed" ? "completed"
+            : undefined,
+          force: true, // 强制刷新
+        }).then((response) => {
+          const mappedOrders = response.data.map(mapApiOrderToOrder);
+          setOrders(mappedOrders);
+        });
+      } else {
+        throw new Error(t("messages.transactionFailed"));
+      }
+    } catch (error: any) {
+      console.error("确认收货失败:", error);
+      hideLoading();
+      setProcessingOrderId(null);
+      const errorMessage = error?.message || error?.shortMessage || t("messages.confirmFailed");
+      const errorStr = String(errorMessage).toLowerCase();
+      if (
+        errorStr.includes("rejected") ||
+        errorStr.includes("denied") ||
+        errorStr.includes("user rejected") ||
+        errorStr.includes("user cancelled") ||
+        errorStr.includes("user denied")
+      ) {
+        message.error(t("messages.transactionCancelled"));
+      } else {
+        message.error(errorMessage);
+      }
+    }
+  };
 
   const tabs = [
     { key: "all", label: t("ordersCenter.tabs.all") },
@@ -184,12 +350,12 @@ export default function OrdersPage() {
       >
         <div className="px-4 pt-4 pb-3">
           <div className="flex items-center justify-between mb-2">
-            <Title level={4} className="!mb-0">
+            <Title level={5} className="!mb-0">
               {t("ordersCenter.title")}
             </Title>
           </div>
           <Text className="text-sm text-slate-500">
-            {t("ordersCenter.total", { count: mockOrders.length })}
+            {t("ordersCenter.total", { count: orderCount ? Number(orderCount) : 0 })}
           </Text>
         </div>
         {/* Fixed Tabs */}
@@ -218,10 +384,19 @@ export default function OrdersPage() {
 
         {/* Orders List */}
         <div className="px-4 py-4 space-y-4">
-          {filteredOrders.map((order) => (
+          {isLoadingOrders ? (
+            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+              <Text className="text-slate-500">{t("loading.defaultMessage") || "加载中..."}</Text>
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+              <Text className="text-slate-500">{t("ordersCenter.noOrders") || "暂无订单"}</Text>
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
             <div
               key={order.id}
-              className="bg-white rounded-3xl shadow-sm overflow-hidden"
+              className="bg-white rounded-lg shadow-sm overflow-hidden"
             >
               <div className="p-4 space-y-3">
                 {/* Order Header */}
@@ -307,6 +482,9 @@ export default function OrdersPage() {
                       type="primary"
                       size="small"
                       className="!bg-slate-900 !border-slate-900"
+                      onClick={() => handleConfirmReceived(order)}
+                      loading={processingOrderId === order.id}
+                      disabled={!isConnected || processingOrderId !== null}
                     >
                       {t("ordersCenter.confirmReceipt")}
                     </Button>
@@ -332,7 +510,8 @@ export default function OrdersPage() {
                 )}
               </div>
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>

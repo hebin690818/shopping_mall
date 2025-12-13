@@ -1,5 +1,6 @@
 // Token合约地址
-export const TOKEN_CONTRACT_ADDRESS = "0xddf4fbcd80a0b50072026a7849ed3526e700a0f4" as const;
+export const TOKEN_CONTRACT_ADDRESS =
+  "0xddf4fbcd80a0b50072026a7849ed3526e700a0f4" as const;
 
 export const tokenAbi = [
   {

@@ -1,5 +1,6 @@
 // Reward合约地址
-export const REWARD_CONTRACT_ADDRESS = "0x505a64aaebf10061b5ef634a63c155a183efa04d" as const;
+export const REWARD_CONTRACT_ADDRESS =
+  "0x505a64aaebf10061b5ef634a63c155a183efa04d" as const;
 
 export const rewardAbi = [
   {

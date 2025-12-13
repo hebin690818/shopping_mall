@@ -57,10 +57,10 @@ export default function PaymentSuccessPage({
           <button
             type="button"
             onClick={() => navigate(ROUTES.HOME)}
-            aria-label="返回"
+            aria-label={t("ariaLabels.back")}
             className="flex items-center justify-center z-10"
           >
-            <img src={backSvg} alt="返回" className="w-5 h-5" />
+            <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
           </button>
           <div className="text-lg font-semibold text-slate-900">
             {t("paymentSuccess.title")}
@@ -71,7 +71,7 @@ export default function PaymentSuccessPage({
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-[100px]">
         <div className="px-4 space-y-6">
-        <div className="bg-white rounded-3xl p-8 text-center shadow-sm space-y-4">
+        <div className="bg-white rounded-lg p-8 text-center shadow-sm space-y-4">
           <div className="w-16 h-16 rounded-full bg-slate-900 text-white flex items-center justify-center text-2xl mx-auto">
             ✓
           </div>
@@ -103,12 +103,12 @@ export default function PaymentSuccessPage({
         </div>
 
         <div>
-          <Title level={4} className="!mb-4 px-1">
+          <Title level={5} className="!mb-4 px-1">
             {t("paymentSuccess.guessYouLike")}
           </Title>
           <div className="grid grid-cols-2 gap-4">
             {list.map((item) => (
-              <div key={item.id} className="bg-white rounded-3xl p-3 shadow-sm space-y-3">
+              <div key={item.id} className="bg-white rounded-lg p-3 shadow-sm space-y-3">
                 <div className="rounded-2xl overflow-hidden bg-slate-100 aspect-square">
                   <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
                 </div>

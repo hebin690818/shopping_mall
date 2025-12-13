@@ -1,60 +1,82 @@
-import { useState, useEffect } from "react";
-import { Button, Typography, Input, message } from "antd";
+import { useState, useEffect, useRef } from "react";
+import { Button, Typography, Input, message, Spin } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../routes";
 import { CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { type Order } from "../orders";
+import { type Order, type OrderStatus } from "../orders";
+import { api, type OrderAPI, type OrderStatusAPI } from "@/lib/api";
+import { useAuth } from "@/hooks/useAuth";
 import product from "@/assets/product.png";
 import backSvg from "@/assets/back.svg";
 
 const { Text, Title } = Typography;
 
-const mockOrders: Order[] = [
-  {
-    id: "1",
-    orderNumber: "ORD-2024-001",
-    date: "2024-11-20",
-    status: "completed",
+// 将API订单状态映射到前端订单状态
+const mapApiStatusToOrderStatus = (apiStatus: OrderStatusAPI): OrderStatus => {
+  switch (apiStatus) {
+    case "pending":
+      return "pending";
+    case "shipped":
+      return "delivering";
+    case "completed":
+      return "completed";
+    case "refund_requested":
+    case "refunded":
+      return "completed";
+    default:
+      return "pending";
+  }
+};
+
+// 将API订单数据转换为前端订单格式
+const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
+  const productData = apiOrder.product || {};
+  
+  return {
+    id: String(apiOrder.id || ""),
+    orderNumber: apiOrder.order_number || apiOrder.orderNumber || `ORD-${apiOrder.id}`,
+    date: apiOrder.date || apiOrder.created_at?.split("T")[0] || "",
+    status: mapApiStatusToOrderStatus(apiOrder.status),
     product: {
-      image: product,
-      name: "无线蓝牙耳机 Pro",
-      store: "科技数码旗舰店",
-      price: "299.99",
-      quantity: 1,
+      image: productData.image || productData.image_url || product,
+      name: productData.name || "",
+      store: productData.store || productData.merchant_name || "",
+      price: String(productData.price || "0"),
+      quantity: productData.quantity || 1,
     },
-    total: "299.99",
-    paymentAmount: "299.99",
-    logisticsCompany: "韵达快递",
-    logisticsNumber: "12345667890890890",
-    shippingTime: "2025-05-05",
-    paymentTime: "2025-05-05",
-  },
-  {
-    id: "2",
-    orderNumber: "ORD-2024-001",
-    date: "2024-11-20",
-    status: "pending",
-    product: {
-      image: product,
-      name: "无线蓝牙耳机 Pro",
-      store: "科技数码旗舰店",
-      price: "299.99",
-      quantity: 1,
-    },
-    total: "299.99",
-  },
-];
+    total: String(apiOrder.total || "0"),
+    paymentAmount: apiOrder.payment_amount 
+      ? String(apiOrder.payment_amount) 
+      : apiOrder.paymentAmount 
+        ? String(apiOrder.paymentAmount)
+        : undefined,
+    logisticsCompany: apiOrder.logistics_company || apiOrder.logisticsCompany,
+    logisticsNumber: apiOrder.logistics_number || apiOrder.logisticsNumber,
+    shippingTime: apiOrder.shipping_time || apiOrder.shippingTime,
+    paymentTime: apiOrder.payment_time || apiOrder.paymentTime,
+    orderIndex: apiOrder.order_index 
+      ? BigInt(apiOrder.order_index) 
+      : apiOrder.orderIndex 
+        ? (typeof apiOrder.orderIndex === "string" ? BigInt(apiOrder.orderIndex) : BigInt(apiOrder.orderIndex))
+        : undefined,
+  };
+};
 
 export default function OrdersListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
+  const { address } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("all");
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(false);
   const [logisticsData, setLogisticsData] = useState<
     Record<string, { waybill: string; company: string }>
   >({});
+  const loadingRef = useRef(false);
+  const errorShownRef = useRef(false);
 
-  const filteredOrders = mockOrders.filter((order) => {
+  const filteredOrders = orders.filter((order) => {
     if (activeTab === "all") return true;
     if (activeTab === "completed") return order.status === "completed";
     if (activeTab === "unfinished") return order.status !== "completed";
@@ -75,6 +97,92 @@ export default function OrdersListPage() {
     }));
   };
 
+  // 加载订单列表的函数
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadOrders = async () => {
+      if (!address) {
+        if (isMounted) {
+          setOrders([]);
+        }
+        return;
+      }
+
+      // 防止重复请求
+      if (loadingRef.current) {
+        return;
+      }
+
+      loadingRef.current = true;
+      errorShownRef.current = false;
+
+      if (isMounted) {
+        setLoading(true);
+      }
+
+      try {
+        // 根据当前选中的标签确定状态筛选
+        let status: OrderStatusAPI | undefined;
+        if (activeTab === "completed") {
+          status = "completed";
+        } else if (activeTab === "unfinished") {
+          // 对于未完成，我们可能需要获取pending和shipped状态
+          // 但由于API只支持单个status筛选，这里先不传status，然后在前端过滤
+          status = undefined;
+        }
+        // activeTab === "all" 时不传status参数，获取所有订单
+
+        const response = await api.getMerchantOrders({
+          merchant_address: address,
+          page: 1,
+          page_size: 100, // 可以根据需要调整分页
+          status: status,
+        });
+
+        if (!isMounted) return;
+
+        // 将API订单转换为前端订单格式
+        let mappedOrders = response.data.map(mapApiOrderToOrder);
+
+        // 如果选择了unfinished标签，需要过滤出未完成的订单
+        if (activeTab === "unfinished") {
+          mappedOrders = mappedOrders.filter((order) => order.status !== "completed");
+        }
+
+        if (isMounted) {
+          setOrders(mappedOrders);
+          errorShownRef.current = false;
+        }
+      } catch (error: any) {
+        // 如果是取消的请求，不显示错误
+        if (error?.name === 'AbortError') {
+          loadingRef.current = false;
+          return;
+        }
+        console.error("加载订单失败:", error);
+        // 只在组件仍挂载时显示错误消息，避免重复提示
+        if (isMounted && !errorShownRef.current) {
+          errorShownRef.current = true;
+          message.error(error.message || t("messages.loadFailed") || "加载订单失败");
+          setOrders([]);
+        }
+      } finally {
+        loadingRef.current = false;
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadOrders();
+
+    // 清理函数
+    return () => {
+      isMounted = false;
+    };
+  }, [address, activeTab, t]);
+
   // 标签切换时滚动到顶部
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -83,10 +191,10 @@ export default function OrdersListPage() {
   const handleUpload = (orderId: string) => {
     const data = logisticsData[orderId];
     if (!data?.waybill || !data?.company) {
-      message.warning("请填写完整的物流信息");
+      message.warning(t("messages.fillLogisticsInfo"));
       return;
     }
-    message.success("上传成功");
+    message.success(t("messages.uploadSuccess"));
     // 这里可以添加实际上传逻辑
   };
 
@@ -130,12 +238,12 @@ export default function OrdersListPage() {
           <button
             type="button"
             onClick={() => navigate(ROUTES.PROFILE)}
-            aria-label="返回"
+            aria-label={t("ariaLabels.back")}
             className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center justify-center z-10"
           >
-            <img src={backSvg} alt="返回" className="w-5 h-5" />
+            <img src={backSvg} alt={t("ariaLabels.back")} className="w-5 h-5" />
           </button>
-          <Title level={4} className="!mb-0">
+          <Title level={5} className="!mb-0">
             {t("orderDetail.title")}
           </Title>
         </div>
@@ -165,10 +273,19 @@ export default function OrdersListPage() {
 
         {/* Orders List */}
         <div className="px-4 py-4 space-y-4">
-          {filteredOrders.map((order) => (
+          {loading ? (
+            <div className="flex justify-center items-center py-20">
+              <Spin size="large" />
+            </div>
+          ) : filteredOrders.length === 0 ? (
+            <div className="flex justify-center items-center py-20">
+              <Text className="text-slate-400">{t("ordersCenter.noOrders")}</Text>
+            </div>
+          ) : (
+            filteredOrders.map((order) => (
             <div
               key={order.id}
-              className="bg-white rounded-3xl shadow-sm overflow-hidden"
+              className="bg-white rounded-lg shadow-sm overflow-hidden"
             >
               <div className="p-4 space-y-3">
                 {/* Order Header */}
@@ -265,7 +382,8 @@ export default function OrdersListPage() {
                 </div>
               )}
             </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
     </div>
