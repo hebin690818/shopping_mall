@@ -88,10 +88,8 @@ export default function AddressEditPage() {
     try {
       if (isEditMode && addressId) {
         await api.updateAddress(addressId, values);
-        message.success(t("messages.updateSuccess") || "更新成功");
       } else {
         await api.createAddress(values);
-        message.success(t("messages.createSuccess") || "创建成功");
       }
       navigate(-1);
     } catch (error: any) {

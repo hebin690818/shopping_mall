@@ -108,7 +108,8 @@
     "save": "Save",
     "back": "Back",
     "add": "Add",
-    "edit": "Edit"
+    "edit": "Edit",
+    "confirm": "Confirm"
   },
   "messages": {
     "connectWalletFirst": "Please connect wallet first",
@@ -119,6 +120,10 @@
     "claimSuccess": "Reward claimed successfully!",
     "confirmSuccess": "Receipt confirmed successfully!",
     "refundSuccess": "Refund successful!",
+    "refundApplySuccess": "Refund application submitted successfully!",
+    "refundApplyFailed": "Failed to apply for refund, please try again",
+    "refundNotAllowed": "This order status does not allow refund application",
+    "invalidOrderId": "Invalid order ID",
     "transactionCancelled": "Transaction cancelled",
     "transactionFailed": "Transaction execution failed, please try again",
     "registerFailed": "Registration failed, please try again",
@@ -139,7 +144,8 @@
     "createSuccess": "Created successfully",
     "createFailed": "Failed to create, please try again",
     "updateSuccess": "Updated successfully",
-    "updateFailed": "Failed to update, please try again"
+    "updateFailed": "Failed to update, please try again",
+    "merchantAddressIsSelf": "You cannot buy your own product"
   },
   "loading": {
     "confirmingReceipt": "Confirming receipt...",
@@ -238,6 +244,7 @@
     "applyTip": "Burn 100U of staking token to open a store",
     "applyCta": "Apply Now →",
     "newMerchants": "New Merchants",
+    "noMerchants": "No Merchants",
     "visitStore": "Visit Store",
     "checkingStatus": "Checking merchant status...",
     "alreadyMerchant": "You are already a merchant",
@@ -286,7 +293,11 @@
     "imageUploadSuccess": "Image uploaded successfully",
     "imageUploadFailed": "Failed to upload image",
     "productCreateSuccess": "Product created successfully",
-    "productCreateFailed": "Failed to create product"
+    "productCreateFailed": "Failed to create product",
+    "productUpdateSuccess": "Product updated successfully",
+    "productUpdateFailed": "Failed to update product",
+    "productLoadFailed": "Failed to load product details",
+    "productNotFound": "Product not found"
   },
   "merchantApplyResult": {
     "title": "Apply to Become Merchant",
@@ -302,7 +313,7 @@
     "tabs": {
       "all": "All",
       "allOrders": "All Orders",
-      "pending": "Pending Payment",
+      "pending": "Pending",
       "delivering": "In Delivery",
       "completed": "Completed",
       "unfinished": "Unfinished"
@@ -312,6 +323,7 @@
     "viewDetails": "View Details",
     "viewLogistics": "View Logistics",
     "confirmReceipt": "Confirm Receipt",
+    "applyRefund": "Apply for Refund",
     "cancelOrder": "Cancel Order",
     "payNow": "Pay Now",
     "noOrders": "No orders",
@@ -320,7 +332,19 @@
     "companyPlaceholder": "Enter logistics company",
     "upload": "Upload",
     "statusCompleted": "Completed",
-    "statusUnfinished": "Unfinished"
+    "statusUnfinished": "Unfinished",
+    "buyerRefundRequest": "Buyer applies for refund",
+    "refundStatusPending": "Pending",
+    "refundStatusRefunded": "Refunded",
+    "refundStatusRejected": "Rejected",
+    "approve": "Approve",
+    "reject": "Reject",
+    "approveRefund": "Agree to refund",
+    "rejectReasonLabel": "Buyer's refund request rejection reason",
+    "rejectReasonPlaceholder": "Please enter the rejection reason here...",
+    "rejectReasonRequired": "Please enter the rejection reason",
+    "rejectRefundSuccess": "Refund rejected successfully",
+    "rejectRefundFailed": "Failed to reject refund, please try again"
   },
   "checkout": {
     "title": "Confirm Order",
@@ -346,7 +370,7 @@
   },
   "productDetail": {
     "title": "Product Details",
-    "placeholderDesc": "This is placeholder description text.",
+    "placeholderDesc": "This product has no introduction",
     "stock": "Stock: {{count}}",
     "introTitle": "Product Introduction",
     "intro1": "A carefully designed high-quality product made of premium materials for excellent performance and feel.",
@@ -357,6 +381,11 @@
     "deliveryFast": "Fast shipping available",
     "buyNow": "Buy Now",
     "connectWallet": "Connect Wallet"
+  },
+  "merchantStore": {
+    "title": "Merchant Store",
+    "products": "Products",
+    "noProducts": "No products available"
   }
 }
 

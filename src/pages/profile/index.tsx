@@ -9,6 +9,7 @@ import {
   useRewardQuery,
 } from "../../hooks/useRewardContract";
 import { useTokenQuery } from "../../hooks/useTokenContract";
+import { useMarketQuery } from "../../hooks/useMarketContract";
 import { useGlobalLoading } from "../../contexts/LoadingProvider";
 import {
   formatTokenAmount,
@@ -29,11 +30,14 @@ export default function ProfilePage() {
   const { claim } = useRewardContract();
   const { usePendingReward, useUserPower } = useRewardQuery();
   const { useBalance } = useTokenQuery();
+  const { useIsMerchant } = useMarketQuery();
 
   // 查询合约数据
   const { data: pendingReward } = usePendingReward(address);
   const { data: userPower } = useUserPower(address);
   const { data: balance } = useBalance(address);
+  const { data: isMerchantData } = useIsMerchant(address);
+  const isMerchant = Boolean(isMerchantData);
 
   const formatAddress = (addr: string | undefined) => {
     if (!addr) return "";
@@ -272,24 +276,28 @@ export default function ProfilePage() {
 
           {/* Navigation Links */}
           <div className="space-y-2">
-            <Card className="!rounded-xl shadow-sm !p-0">
-              <button
-                className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
-                onClick={() => navigate(ROUTES.ORDERS_LIST)}
-              >
-                <Text className="text-base">{t("profile.links.orders")}</Text>
-                <RightOutlined className="text-slate-400" />
-              </button>
-            </Card>
-            <Card className="!rounded-xl shadow-sm !p-0">
-              <button
-                className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
-                onClick={() => navigate(ROUTES.MERCHANT_CENTER)}
-              >
-                <Text className="text-base">{t("profile.links.merchant")}</Text>
-                <RightOutlined className="text-slate-400" />
-              </button>
-            </Card>
+            {isMerchant && (
+              <>
+                <Card className="!rounded-xl shadow-sm !p-0">
+                  <button
+                    className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
+                    onClick={() => navigate(ROUTES.ORDERS_LIST)}
+                  >
+                    <Text className="text-base">{t("profile.links.orders")}</Text>
+                    <RightOutlined className="text-slate-400" />
+                  </button>
+                </Card>
+                <Card className="!rounded-xl shadow-sm !p-0">
+                  <button
+                    className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
+                    onClick={() => navigate(ROUTES.MERCHANT_CENTER)}
+                  >
+                    <Text className="text-base">{t("profile.links.merchant")}</Text>
+                    <RightOutlined className="text-slate-400" />
+                  </button>
+                </Card>
+              </>
+            )}
             <Card className="!rounded-xl shadow-sm !p-0">
               <button
                 className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"

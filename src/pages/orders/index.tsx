@@ -9,7 +9,7 @@ import {
   ClockCircleOutlined,
   CarOutlined,
 } from "@ant-design/icons";
-import { useMarketContract, useMarketQuery } from "../../hooks/useMarketContract";
+import { useMarketContract } from "../../hooks/useMarketContract";
 import { useGlobalLoading } from "../../contexts/LoadingProvider";
 import { api, type OrderAPI, type OrderStatusAPI } from "../../lib/api";
 import product from "@/assets/product.png";
@@ -23,6 +23,7 @@ export type Order = {
   orderNumber: string;
   date: string;
   status: OrderStatus;
+  apiStatus?: OrderStatusAPI; // 原始API状态，用于判断是否可以申请退款
   product: {
     image: string;
     name: string;
@@ -66,6 +67,7 @@ const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
     orderNumber: apiOrder.order_number || apiOrder.orderNumber || `ORD-${apiOrder.id}`,
     date: apiOrder.date || apiOrder.created_at?.split("T")[0] || "",
     status: mapApiStatusToOrderStatus(apiOrder.status),
+    apiStatus: apiOrder.status, // 保存原始API状态
     product: {
       image: productData.image || productData.image_url || product,
       name: productData.name || "",
@@ -97,13 +99,16 @@ export default function OrdersPage() {
   const { address, isConnected } = useConnection();
   const { confirmReceived } = useMarketContract();
   const { showLoading, hideLoading } = useGlobalLoading();
-  const { useOrderCount } = useMarketQuery();
-  const { data: orderCount } = useOrderCount();
   const [activeTab, setActiveTab] = useState<string>("all");
   const [isScrolled, setIsScrolled] = useState(false);
   const [processingOrderId, setProcessingOrderId] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoadingOrders, setIsLoadingOrders] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const [ordersTotal, setOrdersTotal] = useState<number>(0);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -114,6 +119,84 @@ export default function OrdersPage() {
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  // 加载更多订单
+  const loadMoreOrders = useCallback(async () => {
+    if (isLoadingOrders || !hasMore || !address) return;
+
+    // 防止重复请求
+    if (loadingRef.current) {
+      return;
+    }
+
+    loadingRef.current = true;
+    setIsLoadingOrders(true);
+
+    try {
+      // 根据当前选中的标签确定状态筛选
+      let status: OrderStatusAPI | undefined;
+      if (activeTab === "pending") {
+        status = "pending";
+      } else if (activeTab === "delivering") {
+        status = "shipped";
+      } else if (activeTab === "completed") {
+        status = "completed";
+      }
+
+      const response = await api.getBuyerOrders({
+        page: currentPage + 1,
+        page_size: 20,
+        status: status,
+      });
+
+      // 将API订单转换为前端订单格式
+      const mappedOrders = response.data.map(mapApiOrderToOrder);
+
+      if (mappedOrders.length > 0) {
+        setOrders((prev) => [...prev, ...mappedOrders]);
+        setCurrentPage((prev) => prev + 1);
+        setHasMore(response.data.length >= 20);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error: any) {
+      if (error?.name === "AbortError") {
+        loadingRef.current = false;
+        return;
+      }
+      console.error("加载更多订单失败:", error);
+      setHasMore(false);
+    } finally {
+      loadingRef.current = false;
+      setIsLoadingOrders(false);
+    }
+  }, [address, activeTab, currentPage, isLoadingOrders, hasMore]);
+
+  // 使用 Intersection Observer 实现滚动加载
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingOrders) {
+          loadMoreOrders();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, isLoadingOrders, loadMoreOrders]);
 
   // 标签切换时滚动到顶部
   useEffect(() => {
@@ -128,6 +211,7 @@ export default function OrdersPage() {
   const loadOrders = useCallback(async () => {
     if (!address) {
       setOrders([]);
+      setOrdersTotal(0);
       return;
     }
 
@@ -154,15 +238,17 @@ export default function OrdersPage() {
 
       // API层已经有去重机制，这里不需要额外的loadingRef
       const response = await api.getBuyerOrders({
-        buyer_address: address,
         page: 1,
-        page_size: 100, // 可以根据需要调整分页
+        page_size: 20, 
         status: status,
       });
 
       // 将API订单转换为前端订单格式
       const mappedOrders = response.data.map(mapApiOrderToOrder);
       setOrders(mappedOrders);
+      setCurrentPage(1);
+      setHasMore(response.data.length >= 20);
+      setOrdersTotal(response.total || 0);
       errorShownRef.current = false; // 请求成功，重置错误标记
     } catch (error: any) {
       // 如果是取消的请求，不显示错误
@@ -177,6 +263,7 @@ export default function OrdersPage() {
         message.error(t("messages.loadFailed") || "加载订单失败");
       }
       setOrders([]);
+      setOrdersTotal(0);
     } finally {
       setIsLoadingOrders(false);
       loadingRef.current = false;
@@ -250,6 +337,55 @@ export default function OrdersPage() {
     return true;
   });
 
+  // 处理申请退款
+  const handleApplyRefund = async (order: Order) => {
+    if (processingOrderId === order.id) {
+      return;
+    }
+
+    // 检查订单状态，只有在pending或shipped状态下才能申请退款
+    if (order.apiStatus !== "pending" && order.apiStatus !== "shipped") {
+      message.warning(t("messages.refundNotAllowed") || "该订单状态不允许申请退款");
+      return;
+    }
+
+    setProcessingOrderId(order.id);
+
+    try {
+      showLoading(t("loading.processingRefund"));
+      const orderId = Number(order.id);
+      if (isNaN(orderId)) {
+        throw new Error(t("messages.invalidOrderId") || "无效的订单ID");
+      }
+      
+      await api.applyRefund(orderId);
+      hideLoading();
+      setProcessingOrderId(null);
+      message.success(t("messages.refundApplySuccess") || "退款申请提交成功");
+      
+      // 重新加载订单列表（强制刷新，清除缓存）
+      await api.getBuyerOrders({
+        page: 1,
+        page_size: 100,
+        status: activeTab === "pending" ? "pending" 
+          : activeTab === "delivering" ? "shipped"
+          : activeTab === "completed" ? "completed"
+          : undefined,
+        force: true, // 强制刷新
+      }).then((response) => {
+        const mappedOrders = response.data.map(mapApiOrderToOrder);
+        setOrders(mappedOrders);
+        setOrdersTotal(response.total || 0);
+      });
+    } catch (error: any) {
+      console.error("申请退款失败:", error);
+      hideLoading();
+      setProcessingOrderId(null);
+      const errorMessage = error?.message || t("messages.refundApplyFailed") || "申请退款失败，请重试";
+      message.error(errorMessage);
+    }
+  };
+
   // 处理确认收货
   const handleConfirmReceived = async (order: Order) => {
     if (processingOrderId === order.id) {
@@ -287,7 +423,6 @@ export default function OrdersPage() {
         message.success(t("messages.confirmSuccess"));
         // 重新加载订单列表（强制刷新，清除缓存）
         await api.getBuyerOrders({
-          buyer_address: address!,
           page: 1,
           page_size: 100,
           status: activeTab === "pending" ? "pending" 
@@ -298,6 +433,7 @@ export default function OrdersPage() {
         }).then((response) => {
           const mappedOrders = response.data.map(mapApiOrderToOrder);
           setOrders(mappedOrders);
+          setOrdersTotal(response.total || 0);
         });
       } else {
         throw new Error(t("messages.transactionFailed"));
@@ -355,7 +491,7 @@ export default function OrdersPage() {
             </Title>
           </div>
           <Text className="text-sm text-slate-500">
-            {t("ordersCenter.total", { count: orderCount ? Number(orderCount) : 0 })}
+            {t("ordersCenter.total", { count: ordersTotal })}
           </Text>
         </div>
         {/* Fixed Tabs */}
@@ -384,7 +520,7 @@ export default function OrdersPage() {
 
         {/* Orders List */}
         <div className="px-4 py-4 space-y-4">
-          {isLoadingOrders ? (
+          {isLoadingOrders && filteredOrders.length === 0 ? (
             <div className="bg-white rounded-lg shadow-sm p-8 text-center">
               <Text className="text-slate-500">{t("loading.defaultMessage") || "加载中..."}</Text>
             </div>
@@ -393,7 +529,8 @@ export default function OrdersPage() {
               <Text className="text-slate-500">{t("ordersCenter.noOrders") || "暂无订单"}</Text>
             </div>
           ) : (
-            filteredOrders.map((order) => (
+            <>
+              {filteredOrders.map((order) => (
             <div
               key={order.id}
               className="bg-white rounded-lg shadow-sm overflow-hidden"
@@ -471,13 +608,26 @@ export default function OrdersPage() {
                     >
                       {t("ordersCenter.viewDetails")}
                     </Button>
-                    <Button
+                    {/* <Button
                       type="default"
                       size="small"
                       className="!text-slate-600 !border-slate-300"
                     >
                       {t("ordersCenter.viewLogistics")}
-                    </Button>
+                    </Button> */}
+                    {order.apiStatus !== "refund_requested" && order.apiStatus !== "refunded" && (
+                      <Button
+                        type="default"
+                        size="small"
+                        danger
+                        className="!text-red-600 !border-red-300"
+                        onClick={() => handleApplyRefund(order)}
+                        loading={processingOrderId === order.id}
+                        disabled={processingOrderId !== null}
+                      >
+                        {t("ordersCenter.applyRefund")}
+                      </Button>
+                    )}
                     <Button
                       type="primary"
                       size="small"
@@ -492,6 +642,19 @@ export default function OrdersPage() {
                 )}
                 {order.status === "pending" && (
                   <div className="flex gap-2 justify-end">
+                    {order.apiStatus !== "refund_requested" && order.apiStatus !== "refunded" && (
+                      <Button
+                        type="default"
+                        size="small"
+                        danger
+                        className="!text-red-600 !border-red-300"
+                        onClick={() => handleApplyRefund(order)}
+                        loading={processingOrderId === order.id}
+                        disabled={processingOrderId !== null}
+                      >
+                        {t("ordersCenter.applyRefund")}
+                      </Button>
+                    )}
                     <Button
                       type="default"
                       size="small"
@@ -510,7 +673,25 @@ export default function OrdersPage() {
                 )}
               </div>
             </div>
-            ))
+            ))}
+
+            {/* Load More Trigger */}
+            {hasMore && (
+              <div ref={loadMoreRef} className="py-4 text-center">
+                {isLoadingOrders && (
+                  <Text className="text-slate-500">{t("loading.loading")}</Text>
+                )}
+              </div>
+            )}
+
+            {!hasMore && filteredOrders.length > 0 && (
+              <div className="py-4 text-center">
+                <Text className="text-slate-500">
+                  {t("loading.noMoreProducts")}
+                </Text>
+              </div>
+            )}
+            </>
           )}
         </div>
       </div>

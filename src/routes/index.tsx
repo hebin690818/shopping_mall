@@ -12,8 +12,10 @@ import MerchantApplyPage from "../pages/merchantApply";
 import MerchantApplyResultPage from "../pages/merchantApplyResult";
 import MerchantCenterPage from "../pages/merchantCenter";
 import MerchantProductEditPage from "../pages/merchantProductEdit";
+import MerchantStorePage from "../pages/merchantStore";
 import SettingsPage from "../pages/settings";
 import AddressEditPage from "../pages/addressEdit";
+import CategoryProductsPage from "../pages/categoryProducts";
 import AppLayout from "../components/Layout";
 
 // 路由路径常量
@@ -31,8 +33,10 @@ export const ROUTES = {
   MERCHANT_APPLY_RESULT: "/merchant/apply/result/:status",
   MERCHANT_CENTER: "/merchant/center",
   MERCHANT_PRODUCT_EDIT: "/merchant/product/edit/:id",
+  MERCHANT_STORE: "/merchant/store/:merchantId",
   SETTINGS: "/settings",
   ADDRESS_EDIT: "/address/edit",
+  CATEGORY_PRODUCTS: "/category/:categoryId/products",
 } as const;
 
 export const router = createBrowserRouter([
@@ -93,12 +97,20 @@ export const router = createBrowserRouter([
         element: <MerchantProductEditPage />,
       },
       {
+        path: ROUTES.MERCHANT_STORE,
+        element: <MerchantStorePage />,
+      },
+      {
         path: ROUTES.SETTINGS,
         element: <SettingsPage />,
       },
       {
         path: ROUTES.ADDRESS_EDIT,
         element: <AddressEditPage />,
+      },
+      {
+        path: ROUTES.CATEGORY_PRODUCTS,
+        element: <CategoryProductsPage />,
       },
     ],
   },

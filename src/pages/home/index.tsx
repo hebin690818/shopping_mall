@@ -22,8 +22,6 @@ const banners = [
   "https://res.vmallres.com/uomcdn/CN/cms/202511/fafa66b2492b4cfe8b779a4dcd27a1fa.jpg",
 ];
 
-
-
 export default function HomePage({}: HomePageProps) {
   const { t } = useTranslation("common");
   const navigate = useNavigate();
@@ -40,8 +38,10 @@ export default function HomePage({}: HomePageProps) {
   const [loading, setLoading] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [searchKeyword, setSearchKeyword] = useState("");
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const searchTimeoutRef = useRef<number | null>(null);
 
   // 轮播图拖拽相关
   const [isDragging, setIsDragging] = useState(false);
@@ -152,7 +152,7 @@ export default function HomePage({}: HomePageProps) {
   // 获取分类数据
   useEffect(() => {
     let isMounted = true; // 组件挂载标志
-    
+
     const fetchCategories = async () => {
       try {
         setCategoriesLoading(true);
@@ -163,10 +163,10 @@ export default function HomePage({}: HomePageProps) {
         }
       } catch (error: any) {
         // 如果是取消的请求，不更新状态
-        if (error?.name === 'AbortError') {
+        if (error?.name === "AbortError") {
           return;
         }
-        console.error('Failed to fetch categories:', error);
+        console.error("Failed to fetch categories:", error);
       } finally {
         if (isMounted) {
           setCategoriesLoading(false);
@@ -175,7 +175,7 @@ export default function HomePage({}: HomePageProps) {
     };
 
     fetchCategories();
-    
+
     // 清理函数
     return () => {
       isMounted = false;
@@ -185,31 +185,38 @@ export default function HomePage({}: HomePageProps) {
   // 初始加载商品
   useEffect(() => {
     let isMounted = true; // 组件挂载标志
-    
+
     const fetchInitialProducts = async () => {
       try {
         setLoading(true);
-        const response = await api.getProducts({
+        const params: any = {
           page: 1,
-          page_size: 10,
-        });
+          page_size: 20,
+        };
+        if (searchKeyword.trim()) {
+          params.name = searchKeyword.trim();
+        }
+        const response = await api.getProducts(params);
         // 只在组件仍挂载时更新状态
         if (isMounted) {
           if (response.data && response.data.length > 0) {
             setProducts(response.data);
             setCurrentPage(1);
-            setHasMore(response.data.length >= 10);
+            setHasMore(response.data.length >= 20);
           } else {
+            setProducts([]);
+            setCurrentPage(1);
             setHasMore(false);
           }
         }
       } catch (error: any) {
         // 如果是取消的请求，不更新状态
-        if (error?.name === 'AbortError') {
+        if (error?.name === "AbortError") {
           return;
         }
-        console.error('Failed to fetch products:', error);
+        console.error("Failed to fetch products:", error);
         if (isMounted) {
+          setProducts([]);
           setHasMore(false);
         }
       } finally {
@@ -220,12 +227,12 @@ export default function HomePage({}: HomePageProps) {
     };
 
     fetchInitialProducts();
-    
+
     // 清理函数
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [searchKeyword]);
 
   // 加载更多商品
   const loadMoreProducts = useCallback(async () => {
@@ -233,29 +240,58 @@ export default function HomePage({}: HomePageProps) {
 
     setLoading(true);
     try {
-      const response = await api.getProducts({
+      const params: any = {
         page: currentPage + 1,
-        page_size: 10,
-      });
-      
+        page_size: 20,
+      };
+      if (searchKeyword.trim()) {
+        params.name = searchKeyword.trim();
+      }
+      const response = await api.getProducts(params);
+
       if (response.data && response.data.length > 0) {
         setProducts((prev) => [...prev, ...response.data]);
         setCurrentPage((prev) => prev + 1);
-        setHasMore(response.data.length >= 10);
+        setHasMore(response.data.length >= 20);
       } else {
         setHasMore(false);
       }
     } catch (error: any) {
       // 如果是取消的请求，不更新状态
-      if (error?.name === 'AbortError') {
+      if (error?.name === "AbortError") {
         return;
       }
-      console.error('Failed to load more products:', error);
+      console.error("Failed to load more products:", error);
       setHasMore(false);
     } finally {
       setLoading(false);
     }
-  }, [currentPage, loading, hasMore]);
+  }, [currentPage, loading, hasMore, searchKeyword]);
+
+  // 处理搜索输入变化（防抖）
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchKeyword(value);
+
+    // 清除之前的定时器
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+
+    // 设置新的定时器，500ms后触发搜索
+    searchTimeoutRef.current = window.setTimeout(() => {
+      // 搜索逻辑已在useEffect中通过searchKeyword变化触发
+    }, 500);
+  };
+
+  // 清理搜索定时器
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // 使用 Intersection Observer 实现滚动加载
   useEffect(() => {
@@ -322,7 +358,9 @@ export default function HomePage({}: HomePageProps) {
                 connect({ connector: connectors[0] });
               }
             }}
-            disabled={status === "pending" || (!isConnected && connectors.length === 0)}
+            disabled={
+              status === "pending" || (!isConnected && connectors.length === 0)
+            }
             className={`
               relative flex items-center gap-2 px-4 py-2 rounded-full
               font-medium text-sm transition-all duration-300
@@ -339,7 +377,11 @@ export default function HomePage({}: HomePageProps) {
               <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
             )}
             {isConnected && status !== "pending" && !isLoggingIn && (
-              <span className={`w-2 h-2 rounded-full bg-white ${isAuthenticated ? 'animate-pulse' : ''}`} />
+              <span
+                className={`w-2 h-2 rounded-full bg-white ${
+                  isAuthenticated ? "animate-pulse" : ""
+                }`}
+              />
             )}
             <span className="whitespace-nowrap">
               {isConnected
@@ -361,6 +403,9 @@ export default function HomePage({}: HomePageProps) {
             placeholder={t("home.searchPlaceholder")}
             prefix={<SearchOutlined className="text-slate-400" />}
             className="!rounded-full"
+            value={searchKeyword}
+            onChange={handleSearchChange}
+            allowClear
           />
         </div>
         {/* Banner Carousel */}
@@ -426,8 +471,16 @@ export default function HomePage({}: HomePageProps) {
             ) : categories.length > 0 ? (
               <div className="flex gap-3" style={{ width: "max-content" }}>
                 {categories.map((category) => (
-                  <div key={category.id} className="flex-shrink-0 text-center">
-                    <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden">
+                  <div
+                    key={category.id}
+                    className="flex-shrink-0 text-center cursor-pointer"
+                    onClick={() =>
+                      navigate(
+                        ROUTES.CATEGORY_PRODUCTS.replace(":categoryId", category.id)
+                      )
+                    }
+                  >
+                    <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden hover:opacity-80 transition-opacity">
                       <img
                         src={`${API_BASE_URL}${category.image_url}`}
                         alt={category.name}
@@ -442,7 +495,9 @@ export default function HomePage({}: HomePageProps) {
               </div>
             ) : (
               <div className="flex justify-center py-4">
-                <Text className="text-slate-500">{t("loading.noCategoryData")}</Text>
+                <Text className="text-slate-500">
+                  {t("loading.noCategoryData")}
+                </Text>
               </div>
             )}
           </div>
@@ -469,18 +524,22 @@ export default function HomePage({}: HomePageProps) {
                 <div
                   key={product.id}
                   className="!rounded-xl shadow-sm overflow-hidden cursor-pointer"
-                  onClick={() => navigate(ROUTES.PRODUCT_DETAIL.replace(':id', product.id))}
+                  onClick={() =>
+                    navigate(ROUTES.PRODUCT_DETAIL.replace(":id", product.id), {
+                      state: { product },
+                    })
+                  }
                 >
                   <div>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={product.image}
+                        src={`${API_BASE_URL}${product.image_url}`}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="p-3">
-                      <Text className="text-sm font-medium block line-clamp-2 min-h-[2.5rem]">
+                      <Text className="text-sm font-medium block mb-1 ellipsis">
                         {product.name}
                       </Text>
                       <div className="flex justify-between items-center gap-1">
@@ -499,15 +558,19 @@ export default function HomePage({}: HomePageProps) {
           )}
 
           {/* Load More Trigger */}
-          {hasMore && (
+          {hasMore && products.length > 0 && (
             <div ref={loadMoreRef} className="py-4 text-center">
-              {loading && <Text className="text-slate-500">{t("loading.loading")}</Text>}
+              {loading && (
+                <Text className="text-slate-500">{t("loading.loading")}</Text>
+              )}
             </div>
           )}
 
           {!hasMore && products.length > 0 && (
             <div className="py-4 text-center">
-              <Text className="text-slate-500">{t("loading.noMoreProducts")}</Text>
+              <Text className="text-slate-500">
+                {t("loading.noMoreProducts")}
+              </Text>
             </div>
           )}
         </div>

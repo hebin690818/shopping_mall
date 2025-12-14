@@ -1,86 +1,46 @@
 import { useState, useEffect, useRef } from "react";
-import { Button, Typography, Input, message, Spin } from "antd";
+import { Button, Typography, Input, message, Spin, Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "../../routes";
 import { CheckCircleOutlined, ClockCircleOutlined } from "@ant-design/icons";
-import { type Order, type OrderStatus } from "../orders";
-import { api, type OrderAPI, type OrderStatusAPI } from "@/lib/api";
+import { type Order } from "../orders";
 import { useAuth } from "@/hooks/useAuth";
-import product from "@/assets/product.png";
+import { useMerchantOrders } from "@/hooks/useMerchantOrders";
+import { api } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
 
 const { Text, Title } = Typography;
-
-// 将API订单状态映射到前端订单状态
-const mapApiStatusToOrderStatus = (apiStatus: OrderStatusAPI): OrderStatus => {
-  switch (apiStatus) {
-    case "pending":
-      return "pending";
-    case "shipped":
-      return "delivering";
-    case "completed":
-      return "completed";
-    case "refund_requested":
-    case "refunded":
-      return "completed";
-    default:
-      return "pending";
-  }
-};
-
-// 将API订单数据转换为前端订单格式
-const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
-  const productData = apiOrder.product || {};
-  
-  return {
-    id: String(apiOrder.id || ""),
-    orderNumber: apiOrder.order_number || apiOrder.orderNumber || `ORD-${apiOrder.id}`,
-    date: apiOrder.date || apiOrder.created_at?.split("T")[0] || "",
-    status: mapApiStatusToOrderStatus(apiOrder.status),
-    product: {
-      image: productData.image || productData.image_url || product,
-      name: productData.name || "",
-      store: productData.store || productData.merchant_name || "",
-      price: String(productData.price || "0"),
-      quantity: productData.quantity || 1,
-    },
-    total: String(apiOrder.total || "0"),
-    paymentAmount: apiOrder.payment_amount 
-      ? String(apiOrder.payment_amount) 
-      : apiOrder.paymentAmount 
-        ? String(apiOrder.paymentAmount)
-        : undefined,
-    logisticsCompany: apiOrder.logistics_company || apiOrder.logisticsCompany,
-    logisticsNumber: apiOrder.logistics_number || apiOrder.logisticsNumber,
-    shippingTime: apiOrder.shipping_time || apiOrder.shippingTime,
-    paymentTime: apiOrder.payment_time || apiOrder.paymentTime,
-    orderIndex: apiOrder.order_index 
-      ? BigInt(apiOrder.order_index) 
-      : apiOrder.orderIndex 
-        ? (typeof apiOrder.orderIndex === "string" ? BigInt(apiOrder.orderIndex) : BigInt(apiOrder.orderIndex))
-        : undefined,
-  };
-};
 
 export default function OrdersListPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
   const { address } = useAuth();
   const [activeTab, setActiveTab] = useState<string>("all");
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [loading, setLoading] = useState(false);
   const [logisticsData, setLogisticsData] = useState<
     Record<string, { waybill: string; company: string }>
   >({});
-  const loadingRef = useRef(false);
-  const errorShownRef = useRef(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // 退款相关状态
+  const [approveModalVisible, setApproveModalVisible] = useState(false);
+  const [rejectModalVisible, setRejectModalVisible] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
+  const [currentRefundOrder, setCurrentRefundOrder] = useState<Order | null>(null);
+  const [processingRefund, setProcessingRefund] = useState(false);
 
-  const filteredOrders = orders.filter((order) => {
-    if (activeTab === "all") return true;
-    if (activeTab === "completed") return order.status === "completed";
-    if (activeTab === "unfinished") return order.status !== "completed";
-    return true;
+  // 使用自定义 hook 管理订单数据
+  const {
+    orders,
+    loading,
+    hasMore,
+    loadMore: loadMoreOrders,
+    refresh: refreshOrders,
+  } = useMerchantOrders({
+    activeTab,
+    pageSize: 20,
+    enabled: !!address,
   });
 
   const handleLogisticsChange = (
@@ -97,105 +57,84 @@ export default function OrdersListPage() {
     }));
   };
 
-  // 加载订单列表的函数
+  // 使用 Intersection Observer 实现滚动加载
   useEffect(() => {
-    let isMounted = true;
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
 
-    const loadOrders = async () => {
-      if (!address) {
-        if (isMounted) {
-          setOrders([]);
+    if (!hasMore || loading) {
+      return;
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loading) {
+          loadMoreOrders();
         }
-        return;
-      }
+      },
+      { threshold: 0.1 }
+    );
 
-      // 防止重复请求
-      if (loadingRef.current) {
-        return;
-      }
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
 
-      loadingRef.current = true;
-      errorShownRef.current = false;
-
-      if (isMounted) {
-        setLoading(true);
-      }
-
-      try {
-        // 根据当前选中的标签确定状态筛选
-        let status: OrderStatusAPI | undefined;
-        if (activeTab === "completed") {
-          status = "completed";
-        } else if (activeTab === "unfinished") {
-          // 对于未完成，我们可能需要获取pending和shipped状态
-          // 但由于API只支持单个status筛选，这里先不传status，然后在前端过滤
-          status = undefined;
-        }
-        // activeTab === "all" 时不传status参数，获取所有订单
-
-        const response = await api.getMerchantOrders({
-          merchant_address: address,
-          page: 1,
-          page_size: 100, // 可以根据需要调整分页
-          status: status,
-        });
-
-        if (!isMounted) return;
-
-        // 将API订单转换为前端订单格式
-        let mappedOrders = response.data.map(mapApiOrderToOrder);
-
-        // 如果选择了unfinished标签，需要过滤出未完成的订单
-        if (activeTab === "unfinished") {
-          mappedOrders = mappedOrders.filter((order) => order.status !== "completed");
-        }
-
-        if (isMounted) {
-          setOrders(mappedOrders);
-          errorShownRef.current = false;
-        }
-      } catch (error: any) {
-        // 如果是取消的请求，不显示错误
-        if (error?.name === 'AbortError') {
-          loadingRef.current = false;
-          return;
-        }
-        console.error("加载订单失败:", error);
-        // 只在组件仍挂载时显示错误消息，避免重复提示
-        if (isMounted && !errorShownRef.current) {
-          errorShownRef.current = true;
-          message.error(error.message || t("messages.loadFailed") || "加载订单失败");
-          setOrders([]);
-        }
-      } finally {
-        loadingRef.current = false;
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadOrders();
-
-    // 清理函数
     return () => {
-      isMounted = false;
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
     };
-  }, [address, activeTab, t]);
+  }, [hasMore, loading, loadMoreOrders]);
 
   // 标签切换时滚动到顶部
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [activeTab]);
 
-  const handleUpload = (orderId: string) => {
+  const handleUpload = async (orderId: string) => {
     const data = logisticsData[orderId];
-    if (!data?.waybill || !data?.company) {
+    if (!data?.waybill) {
       message.warning(t("messages.fillLogisticsInfo"));
       return;
     }
-    message.success(t("messages.uploadSuccess"));
-    // 这里可以添加实际上传逻辑
+
+    if (!address) {
+      message.warning(t("messages.connectWalletFirst"));
+      return;
+    }
+
+    try {
+      // 将 orderId 转换为数字
+      const orderIdNum = parseInt(orderId, 10);
+      if (isNaN(orderIdNum)) {
+        message.error(t("messages.invalidOrderId"));
+        return;
+      }
+
+      // 调用发货接口
+      await api.shipOrder({
+        merchant_address: address,
+        order_id: orderIdNum,
+        tracking_number: data.waybill,
+      });
+
+      message.success(t("messages.uploadSuccess"));
+      
+      // 清空该订单的物流数据
+      setLogisticsData((prev) => {
+        const newData = { ...prev };
+        delete newData[orderId];
+        return newData;
+      });
+
+      // 刷新订单列表
+      if (refreshOrders) {
+        refreshOrders();
+      }
+    } catch (error: any) {
+      message.error(error?.message || t("messages.loadFailed") || "上传失败，请重试");
+    }
   };
 
   const getStatusButton = (status: Order["status"]) => {
@@ -224,10 +163,104 @@ export default function OrdersListPage() {
     }
   };
 
+  // 处理同意退款
+  const handleApproveRefund = async () => {
+    if (!currentRefundOrder || processingRefund) return;
+
+    setProcessingRefund(true);
+    try {
+      const orderId = parseInt(currentRefundOrder.id, 10);
+      if (isNaN(orderId)) {
+        message.error(t("messages.invalidOrderId"));
+        return;
+      }
+
+      await api.approveRefund(orderId);
+      message.success(t("messages.refundSuccess") || "同意退款成功");
+      setApproveModalVisible(false);
+      setCurrentRefundOrder(null);
+      
+      // 刷新订单列表
+      if (refreshOrders) {
+        refreshOrders();
+      }
+    } catch (error: any) {
+      message.error(error?.message || t("messages.refundFailed") || "同意退款失败，请重试");
+    } finally {
+      setProcessingRefund(false);
+    }
+  };
+
+  // 处理拒绝退款
+  const handleRejectRefund = async () => {
+    if (!currentRefundOrder || processingRefund) return;
+
+    if (!rejectReason.trim()) {
+      message.warning(t("ordersCenter.rejectReasonRequired") || "请输入拒绝理由");
+      return;
+    }
+
+    setProcessingRefund(true);
+    try {
+      const orderId = parseInt(currentRefundOrder.id, 10);
+      if (isNaN(orderId)) {
+        message.error(t("messages.invalidOrderId"));
+        return;
+      }
+
+      await api.rejectRefund(orderId, rejectReason.trim());
+      message.success(t("ordersCenter.rejectRefundSuccess") || "拒绝退款成功");
+      setRejectModalVisible(false);
+      setRejectReason("");
+      setCurrentRefundOrder(null);
+      
+      // 刷新订单列表
+      if (refreshOrders) {
+        refreshOrders();
+      }
+    } catch (error: any) {
+      message.error(error?.message || t("ordersCenter.rejectRefundFailed") || "拒绝退款失败，请重试");
+    } finally {
+      setProcessingRefund(false);
+    }
+  };
+
+  // 打开同意退款对话框
+  const openApproveModal = (order: Order) => {
+    setCurrentRefundOrder(order);
+    setApproveModalVisible(true);
+  };
+
+  // 打开拒绝退款对话框
+  const openRejectModal = (order: Order) => {
+    setCurrentRefundOrder(order);
+    setRejectReason("");
+    setRejectModalVisible(true);
+  };
+
+  // 获取退款状态显示
+  const getRefundStatusDisplay = (order: Order) => {
+    if (order.apiStatus === "refund_requested") {
+      return {
+        text: t("ordersCenter.refundStatusPending") || "待处理",
+        color: "text-slate-600",
+        icon: <ClockCircleOutlined />,
+      };
+    } else if (order.apiStatus === "refunded") {
+      return {
+        text: t("ordersCenter.refundStatusRefunded") || "已退款",
+        color: "text-green-600",
+        icon: <CheckCircleOutlined />,
+      };
+    }
+    return null;
+  };
+
   const tabs = [
     { key: "all", label: t("ordersCenter.tabs.all") },
     { key: "completed", label: t("ordersCenter.tabs.completed") },
     { key: "unfinished", label: t("ordersCenter.tabs.unfinished") },
+    { key: "pending", label: t("ordersCenter.tabs.pending") || "待处理" },
   ];
 
   return (
@@ -270,122 +303,398 @@ export default function OrdersListPage() {
 
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-[120px]">
-
         {/* Orders List */}
         <div className="px-4 py-4 space-y-4">
-          {loading ? (
+          {loading && orders.length === 0 ? (
             <div className="flex justify-center items-center py-20">
               <Spin size="large" />
             </div>
-          ) : filteredOrders.length === 0 ? (
+          ) : orders.length === 0 ? (
             <div className="flex justify-center items-center py-20">
-              <Text className="text-slate-400">{t("ordersCenter.noOrders")}</Text>
+              <Text className="text-slate-400">
+                {t("ordersCenter.noOrders")}
+              </Text>
             </div>
           ) : (
-            filteredOrders.map((order) => (
-            <div
-              key={order.id}
-              className="bg-white rounded-lg shadow-sm overflow-hidden"
-            >
-              <div className="p-4 space-y-3">
-                {/* Order Header */}
-                <div className="flex items-center justify-between">
-                  <div>
-                    <Text className="text-xs text-slate-500 block">
-                      {t("ordersCenter.orderNo", { no: order.orderNumber })}
-                    </Text>
-                    {order.date && (
-                      <Text className="text-xs text-slate-400 block mt-1">
-                        {order.date}
-                      </Text>
-                    )}
-                  </div>
-                  {getStatusButton(order.status)}
-                </div>
-
-                {/* Product Info */}
-                <div className="flex gap-3">
-                  <img
-                    src={order.product.image}
-                    alt={order.product.name}
-                    className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <Text className="text-sm font-medium block mb-1">
-                      {order.product.name}
-                    </Text>
-                    <Text className="text-xs text-slate-500 block mb-1">
-                      {order.product.store}
-                    </Text>
-                    <div className="flex items-center justify-between">
-                      <Text className="text-base font-semibold text-slate-900">
-                        ¥{order.product.price}
-                      </Text>
-                      <Text className="text-xs text-slate-500">
-                        x{order.product.quantity}
+            <>
+              {orders.map((order) => {
+                const refundStatus = getRefundStatusDisplay(order);
+                const isRefundRequested = order.apiStatus === "refund_requested";
+                const isRefunded = order.apiStatus === "refunded";
+                
+                return (
+                  <div
+                    key={order.id}
+                    className="bg-white rounded-lg shadow-sm overflow-hidden"
+                  >
+                  {/* 退款请求标题 */}
+                  {(isRefundRequested || isRefunded) && (
+                    <div className="px-4 pt-4 pb-2">
+                      <Text className="text-sm font-medium text-slate-900">
+                        {t("ordersCenter.buyerRefundRequest") || "买家申请退款"}
                       </Text>
                     </div>
-                  </div>
-                </div>
+                  )}
+                  
+                  <div className="p-4 space-y-3">
+                    {/* Order Header */}
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <Text className="text-xs text-slate-500 block">
+                          {t("ordersCenter.orderNo", { no: order.orderNumber })}
+                        </Text>
+                        {order.date && (
+                          <Text className="text-xs text-slate-400 block mt-1">
+                            {order.date}
+                          </Text>
+                        )}
+                      </div>
+                      {refundStatus ? (
+                        <Button
+                          size="small"
+                          shape="round"
+                          className={`!bg-slate-100 !border-slate-200 ${refundStatus.color} px-3`}
+                          icon={refundStatus.icon}
+                        >
+                          {refundStatus.text}
+                        </Button>
+                      ) : (
+                        getStatusButton(order.status)
+                      )}
+                    </div>
 
-                {/* Total and view details */}
-                <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
-                  <Text className="text-sm text-slate-500">
-                    {t("ordersCenter.totalPrice", { amount: order.total })}
-                  </Text>
-                  {order.status === "completed" && (
-                    <button
-                      type="button"
-                      className="text-xs text-slate-500 flex items-center gap-1"
-                      onClick={() => navigate(ROUTES.ORDER_DETAIL.replace(':id', order.id))}
-                    >
-                      {t("ordersCenter.viewDetails")}
-                      <span className="text-slate-400">›</span>
-                    </button>
+                    {/* Product Info */}
+                    <div className="flex gap-3">
+                      <img
+                        src={order.product.image}
+                        alt={order.product.name}
+                        className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <Text className="text-sm font-medium block mb-1">
+                          {order.product.name}
+                        </Text>
+                        <Text className="text-xs text-slate-500 block mb-1">
+                          {order.product.store}
+                        </Text>
+                        <div className="flex items-center justify-between">
+                          <Text className="text-base font-semibold text-slate-900">
+                            ¥{order.product.price}
+                          </Text>
+                          <Text className="text-xs text-slate-500">
+                            x{order.product.quantity}
+                          </Text>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Total and view details */}
+                    <div className="pt-3 border-t border-slate-100 flex items-center justify-between">
+                      <Text className="text-sm text-slate-500">
+                        {t("ordersCenter.totalPrice", { amount: order.total })}
+                      </Text>
+                      {order.status === "completed" && !isRefundRequested && !isRefunded && (
+                        <button
+                          type="button"
+                          className="text-xs text-slate-500 flex items-center gap-1"
+                          onClick={() =>
+                            navigate(
+                              ROUTES.ORDER_DETAIL.replace(":id", order.id)
+                            )
+                          }
+                        >
+                          {t("ordersCenter.viewDetails")}
+                          <span className="text-slate-400">›</span>
+                        </button>
+                      )}
+                      {(isRefundRequested || isRefunded) && (
+                        <button
+                          type="button"
+                          className="text-xs text-slate-500 flex items-center gap-1"
+                          onClick={() =>
+                            navigate(
+                              ROUTES.ORDER_DETAIL.replace(":id", order.id)
+                            )
+                          }
+                        >
+                          {t("ordersCenter.viewDetails")}
+                          <span className="text-slate-400">›</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 退款请求操作按钮 */}
+                  {isRefundRequested && (
+                    <div className="border-t border-slate-100 px-4 py-4 space-y-3">
+                      <div className="flex gap-3">
+                        <Button
+                          block
+                          shape="round"
+                          className="!bg-white !border-slate-900 !text-slate-900 h-11"
+                          onClick={() => openRejectModal(order)}
+                          disabled={processingRefund}
+                        >
+                          {t("ordersCenter.reject") || "拒绝"}
+                        </Button>
+                        <Button
+                          type="primary"
+                          block
+                          shape="round"
+                          className="!bg-slate-900 !border-slate-900 h-11"
+                          onClick={() => openApproveModal(order)}
+                          disabled={processingRefund}
+                        >
+                          {t("ordersCenter.approve") || "同意"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Upload Logistics Section for Unfinished Orders */}
+                  {order.status !== "completed" && !isRefundRequested && !isRefunded && (
+                    <div className="border-t border-slate-100 px-4 py-4 space-y-3">
+                      <Text className="text-xs text-slate-500 block">
+                        {t("ordersCenter.uploadLogisticsTitle")}
+                      </Text>
+                      <Input
+                        size="large"
+                        placeholder={t("ordersCenter.waybillPlaceholder")}
+                        className="!rounded-2xl !bg-slate-50 !border-slate-200"
+                        value={logisticsData[order.id]?.waybill || ""}
+                        onChange={(e) =>
+                          handleLogisticsChange(
+                            order.id,
+                            "waybill",
+                            e.target.value
+                          )
+                        }
+                      />
+                      {/* <Input
+                        size="large"
+                        placeholder={t("ordersCenter.companyPlaceholder")}
+                        className="!rounded-2xl !bg-slate-50 !border-slate-200"
+                        value={logisticsData[order.id]?.company || ""}
+                        onChange={(e) =>
+                          handleLogisticsChange(
+                            order.id,
+                            "company",
+                            e.target.value
+                          )
+                        }
+                      /> */}
+                      <Button
+                        type="primary"
+                        block
+                        shape="round"
+                        className="!bg-slate-900 !border-slate-900 h-11"
+                        onClick={() => handleUpload(order.id)}
+                      >
+                        {t("ordersCenter.upload")}
+                      </Button>
+                    </div>
+                  )}
+                  </div>
+                );
+              })}
+
+              {/* Load More Trigger */}
+              {hasMore && (
+                <div ref={loadMoreRef} className="py-4 text-center">
+                  {loading && (
+                    <Text className="text-slate-500">
+                      {t("loading.loading")}
+                    </Text>
                   )}
                 </div>
-              </div>
+              )}
 
-              {/* Upload Logistics Section for Unfinished Orders */}
-              {order.status !== "completed" && (
-                <div className="border-t border-slate-100 px-4 py-4 space-y-3">
-                  <Text className="text-xs text-slate-500 block">
-                    {t("ordersCenter.uploadLogisticsTitle")}
+              {!hasMore && orders.length > 0 && (
+                <div className="py-4 text-center">
+                  <Text className="text-slate-500">
+                    {t("loading.noMoreProducts")}
                   </Text>
-                  <Input
-                    size="large"
-                    placeholder={t("ordersCenter.waybillPlaceholder")}
-                    className="!rounded-2xl !bg-slate-50 !border-slate-200"
-                    value={logisticsData[order.id]?.waybill || ""}
-                    onChange={(e) =>
-                      handleLogisticsChange(order.id, "waybill", e.target.value)
-                    }
-                  />
-                  <Input
-                    size="large"
-                    placeholder={t("ordersCenter.companyPlaceholder")}
-                    className="!rounded-2xl !bg-slate-50 !border-slate-200"
-                    value={logisticsData[order.id]?.company || ""}
-                    onChange={(e) =>
-                      handleLogisticsChange(order.id, "company", e.target.value)
-                    }
-                  />
-                  <Button
-                    type="primary"
-                    block
-                    shape="round"
-                    className="!bg-slate-900 !border-slate-900 h-11"
-                    onClick={() => handleUpload(order.id)}
-                  >
-                    {t("ordersCenter.upload")}
-                  </Button>
                 </div>
               )}
-            </div>
-            ))
+            </>
           )}
         </div>
       </div>
+
+      {/* 同意退款确认对话框 */}
+      <Modal
+        open={approveModalVisible}
+        onCancel={() => {
+          setApproveModalVisible(false);
+          setCurrentRefundOrder(null);
+        }}
+        footer={null}
+        className="refund-modal"
+        width="90%"
+        style={{ maxWidth: "400px" }}
+      >
+        {currentRefundOrder && (
+          <div className="space-y-4">
+            <div>
+              <Text className="text-xs text-slate-500 block">
+                {t("ordersCenter.orderNo", { no: currentRefundOrder.orderNumber })}
+              </Text>
+              {currentRefundOrder.date && (
+                <Text className="text-xs text-slate-400 block mt-1">
+                  {currentRefundOrder.date}
+                </Text>
+              )}
+            </div>
+            
+            {/* 产品信息 */}
+            <div className="flex gap-3 bg-slate-50 rounded-lg p-3">
+              <img
+                src={currentRefundOrder.product.image}
+                alt={currentRefundOrder.product.name}
+                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <Text className="text-sm font-medium block mb-1">
+                  {currentRefundOrder.product.name}
+                </Text>
+                <Text className="text-xs text-slate-500 block mb-1">
+                  {currentRefundOrder.product.store}
+                </Text>
+                <div className="flex items-center justify-between">
+                  <Text className="text-base font-semibold text-slate-900">
+                    ¥{currentRefundOrder.product.price}
+                  </Text>
+                  <Text className="text-xs text-slate-500">
+                    x{currentRefundOrder.product.quantity}
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                block
+                shape="round"
+                className="!bg-white !border-slate-900 !text-slate-900 h-11"
+                onClick={() => {
+                  setApproveModalVisible(false);
+                  setCurrentRefundOrder(null);
+                }}
+                disabled={processingRefund}
+              >
+                {t("common.back") || "返回"}
+              </Button>
+              <Button
+                type="primary"
+                block
+                shape="round"
+                className="!bg-slate-900 !border-slate-900 h-11"
+                onClick={handleApproveRefund}
+                loading={processingRefund}
+              >
+                {t("ordersCenter.approveRefund") || "同意退款"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* 拒绝退款对话框 */}
+      <Modal
+        open={rejectModalVisible}
+        onCancel={() => {
+          setRejectModalVisible(false);
+          setRejectReason("");
+          setCurrentRefundOrder(null);
+        }}
+        footer={null}
+        className="refund-modal"
+        width="90%"
+        style={{ maxWidth: "400px" }}
+      >
+        {currentRefundOrder && (
+          <div className="space-y-4">
+            <div>
+              <Text className="text-xs text-slate-500 block">
+                {t("ordersCenter.orderNo", { no: currentRefundOrder.orderNumber })}
+              </Text>
+              {currentRefundOrder.date && (
+                <Text className="text-xs text-slate-400 block mt-1">
+                  {currentRefundOrder.date}
+                </Text>
+              )}
+            </div>
+            
+            {/* 产品信息 */}
+            <div className="flex gap-3 bg-slate-50 rounded-lg p-3">
+              <img
+                src={currentRefundOrder.product.image}
+                alt={currentRefundOrder.product.name}
+                className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+              />
+              <div className="flex-1 min-w-0">
+                <Text className="text-sm font-medium block mb-1">
+                  {currentRefundOrder.product.name}
+                </Text>
+                <Text className="text-xs text-slate-500 block mb-1">
+                  {currentRefundOrder.product.store}
+                </Text>
+                <div className="flex items-center justify-between">
+                  <Text className="text-base font-semibold text-slate-900">
+                    ¥{currentRefundOrder.product.price}
+                  </Text>
+                  <Text className="text-xs text-slate-500">
+                    x{currentRefundOrder.product.quantity}
+                  </Text>
+                </div>
+              </div>
+            </div>
+
+            {/* 拒绝理由输入 */}
+            <div>
+              <Text className="text-sm text-slate-900 block mb-2">
+                {t("ordersCenter.rejectReasonLabel") || "买家申请退款拒绝理由"}
+                <span className="text-red-500 ml-1">*</span>
+              </Text>
+              <Input.TextArea
+                rows={4}
+                placeholder={t("ordersCenter.rejectReasonPlaceholder") || "请在这里输入拒绝理由..."}
+                value={rejectReason}
+                onChange={(e) => setRejectReason(e.target.value)}
+                className="!rounded-lg"
+                maxLength={200}
+                showCount
+              />
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                block
+                shape="round"
+                className="!bg-white !border-slate-900 !text-slate-900 h-11"
+                onClick={() => {
+                  setRejectModalVisible(false);
+                  setRejectReason("");
+                  setCurrentRefundOrder(null);
+                }}
+                disabled={processingRefund}
+              >
+                {t("common.back") || "返回"}
+              </Button>
+              <Button
+                type="primary"
+                block
+                shape="round"
+                className="!bg-slate-900 !border-slate-900 h-11"
+                onClick={handleRejectRefund}
+                loading={processingRefund}
+              >
+                {t("common.confirm") || "确定"}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

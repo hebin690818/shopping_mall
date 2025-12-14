@@ -1,49 +1,37 @@
 import { Button, Typography } from "antd";
 import { useConnection, useConnect } from "wagmi";
 import { useTranslation } from "react-i18next";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ROUTES } from "../../routes";
-import type { Product } from "../home";
+import type { Product } from "../../lib/api";
+import { API_BASE_URL } from "../../lib/config";
 import backSvg from "@/assets/back.svg";
 
 const { Title, Paragraph, Text } = Typography;
 
-// 模拟商品数据 - 实际应该从API获取
-const mockProducts: Product[] = [
-  {
-    id: "product-1-1",
-    name: "无线蓝牙耳机 pro",
-    price: "$199.99",
-    image:
-      "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
-  },
-  {
-    id: "product-1-2",
-    name: "Smart Watch Ultra",
-    price: "$199.99",
-    image:
-      "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
-  },
-];
-
-const fallbackProduct: Product = {
-  id: "default",
-  name: "无线蓝牙耳机 Pro",
-  price: "$299.99",
-  image:
-    "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
-};
-
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { isConnected } = useConnection();
   const { connect, connectors, status, error } = useConnect();
   const { t } = useTranslation("common");
 
-  // 从模拟数据中查找商品，实际应该从API获取
-  const product = mockProducts.find((p) => p.id === id) || fallbackProduct;
-  const displayProduct = product;
+  // 从上一页传递的 state 中获取商品数据
+  const product = (location.state as { product?: Product })?.product;
+  // 如果没有传递数据，则回退到使用 id 从 API 获取（这里暂时使用 fallback）
+  const displayProduct = product || {
+    id: id || "default",
+    name: "商品加载中...",
+    price: "$0.00",
+    image: "",
+    image_url: "",
+  };
+
+  // 处理图片 URL，优先使用 image_url，如果没有则使用 image
+  const productImage = displayProduct.image_url
+    ? `${API_BASE_URL}${displayProduct.image_url}`
+    : displayProduct.image || "";
   const actionLabel = isConnected
     ? t("productDetail.buyNow")
     : t("productDetail.connectWallet");
@@ -58,11 +46,13 @@ export default function ProductDetailPage() {
       return;
     }
 
-    navigate(ROUTES.ORDER_CONFIRM.replace(":productId", displayProduct.id));
+    navigate(ROUTES.ORDER_CONFIRM.replace(":productId", displayProduct.id), {
+      state: { product: displayProduct },
+    });
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-32">
+    <div className=" bg-slate-50 pb-20">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white shadow-sm">
         <div className="flex items-center p-4 relative">
@@ -81,33 +71,30 @@ export default function ProductDetailPage() {
       </div>
 
       {/* Content with padding-top to avoid header overlap */}
-      <div className="pt-[100px]">
+      <div className="pt-[72px]">
         {/* Product Image - now in scrollable area */}
-        <div className="px-6 pb-6">
-          <div className="rounded-[32px] overflow-hidden bg-slate-100 w-full aspect-[3/4] mx-auto">
+        <div className="px-4 pb-4">
+          <div className="rounded-[16px] overflow-hidden bg-slate-100 w-full mx-auto">
             <img
-              src={displayProduct.image}
+              src={productImage}
               alt={displayProduct.name}
-              className="w-full h-full object-cover"
+              className="w-full h-300 object-cover"
             />
           </div>
         </div>
 
-        <div className="px-4 py-6 space-y-4">
+        <div className="px-4 space-y-4">
           <div className="bg-white rounded-lg p-5 shadow-sm space-y-3">
             <Title level={5} className="!mb-0">
               {displayProduct.name}
             </Title>
-            <Paragraph className="!mb-0 text-slate-500 text-sm leading-relaxed">
-              {t("productDetail.placeholderDesc")}
-            </Paragraph>
             <div className="flex items-center justify-between">
               <Text className="text-2xl font-semibold text-slate-900">
-                {displayProduct.price}
+                ${displayProduct.price}
               </Text>
-              <Text className="text-xs text-slate-500">
+              {/* <Text className="text-xs text-slate-500">
                 {t("productDetail.stock", { count: 60 })}
-              </Text>
+              </Text> */}
             </div>
           </div>
 
@@ -116,10 +103,7 @@ export default function ProductDetailPage() {
               {t("productDetail.introTitle")}
             </Title>
             <Paragraph className="text-sm text-slate-600 leading-relaxed !mb-0">
-              {t("productDetail.intro1")}
-            </Paragraph>
-            <Paragraph className="text-sm text-slate-600 leading-relaxed !mb-0">
-              {t("productDetail.intro2")}
+              {displayProduct.description || t("productDetail.placeholderDesc")}
             </Paragraph>
           </div>
 

@@ -1,41 +1,24 @@
 import { useEffect, useState } from "react";
-import { Button, Form, Input, Typography, Select, message, Upload } from "antd";
+import {
+  Button,
+  Form,
+  Input,
+  Typography,
+  Select,
+  message,
+  Upload,
+  Spin,
+} from "antd";
 import { PlusOutlined, CloseCircleFilled } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "../../routes";
-import type { MerchantProduct } from "../merchantCenter";
-import { api, type Category } from "../../lib/api";
+import { api, type Category, type Product } from "../../lib/api";
 import backSvg from "@/assets/back.svg";
 import type { UploadFile } from "antd/es/upload/interface";
 import { API_BASE_URL } from "@/lib/config";
 
 const { Title, Text } = Typography;
-
-// 模拟商品数据 - 实际应该从API获取
-const mockProducts: MerchantProduct[] = [
-  {
-    id: "1",
-    name: "无线蓝牙耳机 Pro",
-    price: "299.99",
-    stock: 100,
-    status: "on",
-  },
-  {
-    id: "2",
-    name: "无线蓝牙耳机 Pro",
-    price: "299.99",
-    stock: 100,
-    status: "off",
-  },
-  {
-    id: "3",
-    name: "无线蓝牙耳机 Pro",
-    price: "299.99",
-    stock: 100,
-    status: "off",
-  },
-];
 
 export default function MerchantProductEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,14 +30,11 @@ export default function MerchantProductEditPage() {
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [selectOpen, setSelectOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [product, setProduct] = useState<Product | null>(null);
 
   // 判断是新增还是编辑模式
   const isEditMode = id && id !== "new";
-
-  // 从模拟数据中查找商品，实际应该从API获取
-  const product = isEditMode
-    ? mockProducts.find((p) => p.id === id)
-    : undefined;
 
   // 获取分类列表
   useEffect(() => {
@@ -82,31 +62,79 @@ export default function MerchantProductEditPage() {
     };
   }, [t]);
 
-  // 根据模式设置表单初始值
+  // 编辑模式：从API获取商品详情
   useEffect(() => {
-    if (isEditMode && product) {
-      // 编辑模式：设置商品数据
-      // 注意：实际应该从API获取完整商品信息，包括category_id和image
-      const productWithExtras = product as MerchantProduct & {
-        category_id?: number;
-        image?: string;
-      };
-      form.setFieldsValue({
-        name: product.name,
-        description: "",
-        price: product.price,
-        category_id: productWithExtras.category_id,
-      });
-      if (productWithExtras.image) {
-        setImageUrl(productWithExtras.image);
-      }
-    } else {
+    if (!isEditMode || !id) {
       // 新增模式：重置表单为空
       form.resetFields();
       setImageUrl("");
       setFileList([]);
+      setProduct(null);
+      return;
     }
-  }, [isEditMode, product, form]);
+
+    let isMounted = true;
+
+    const fetchProduct = async () => {
+      try {
+        setLoading(true);
+        const productData = await api.getProductById(id);
+
+        if (!isMounted) return;
+
+        if (!productData) {
+          message.error(t("merchantEdit.productNotFound"));
+          navigate(ROUTES.MERCHANT_CENTER);
+          return;
+        }
+
+        setProduct(productData);
+
+        // 设置表单初始值
+        const productImageUrl =
+          productData.image_url || productData.image || "";
+        form.setFieldsValue({
+          name: productData.name,
+          description: productData.description || "",
+          price:
+            typeof productData.price === "string"
+              ? parseFloat(productData.price) || 0
+              : productData.price || 0,
+          category_id: productData.category_id,
+        });
+
+        // 设置图片
+        if (productImageUrl) {
+          setImageUrl(productImageUrl);
+          setFileList([
+            {
+              uid: "-1",
+              name: "product-image",
+              status: "done",
+              url: productImageUrl.startsWith("http")
+                ? productImageUrl
+                : `${API_BASE_URL}${productImageUrl}`,
+            },
+          ]);
+        }
+      } catch (error: any) {
+        console.error("获取商品详情失败:", error);
+        if (isMounted) {
+          message.error(error.message || t("merchantEdit.productLoadFailed"));
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    fetchProduct();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [isEditMode, id, form, navigate, t]);
 
   // 处理图片上传
   const handleImageUpload = async (file: File) => {
@@ -165,37 +193,52 @@ export default function MerchantProductEditPage() {
       return;
     }
 
-    // 转换价格为数字类型
-    let priceNumber: number;
-    if (typeof values.price === "string") {
-      priceNumber = parseFloat(values.price);
-      if (isNaN(priceNumber) || priceNumber <= 0) {
-        message.error(t("merchantEdit.priceRequired"));
-        return;
-      }
-    } else {
-      priceNumber = values.price;
-      if (isNaN(priceNumber) || priceNumber <= 0) {
-        message.error(t("merchantEdit.priceRequired"));
-        return;
-      }
-    }
-
     try {
       setUploading(true);
-      // 创建商品
-      await api.createProduct({
-        category_id: values.category_id,
-        description: values.description || "",
-        image_url: imageUrl,
-        name: values.name,
-        price: priceNumber,
-      });
 
-      message.success(t("merchantEdit.productCreateSuccess"));
-      navigate(ROUTES.MERCHANT_CENTER);
+      if (isEditMode && id) {
+        // 编辑模式：更新商品
+        let productId: number;
+        if (product?.id) {
+          productId =
+            typeof product.id === "string"
+              ? parseInt(product.id, 10)
+              : (product.id as number);
+        } else {
+          productId = parseInt(id, 10);
+        }
+
+        await api.updateProduct({
+          id: productId,
+          category_id: values.category_id,
+          description: values.description || "",
+          image_url: imageUrl,
+          name: values.name,
+          price: Number(values.price),
+          status: (product as any)?.status || "on",
+        });
+      } else {
+        // 新增模式：创建商品
+        await api.createProduct({
+          category_id: values.category_id,
+          description: values.description || "",
+          image_url: imageUrl,
+          name: values.name,
+          price: Number(values.price),
+        });
+      }
+
+      // 导航到商家中心并传递刷新标志
+      navigate(ROUTES.MERCHANT_CENTER, {
+        state: { refreshProducts: true },
+      });
     } catch (error: any) {
-      message.error(error.message || t("merchantEdit.productCreateFailed"));
+      message.error(
+        error.message ||
+          (isEditMode
+            ? t("merchantEdit.productUpdateFailed") || "商品更新失败"
+            : t("merchantEdit.productCreateFailed"))
+      );
     } finally {
       setUploading(false);
     }
@@ -222,165 +265,170 @@ export default function MerchantProductEditPage() {
 
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
-        <div className="px-4 space-y-4">
-          {/* 基本信息卡片 */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <Title level={5} className="!mb-3">
-              {t("merchantEdit.basicInfo")}
-            </Title>
-            <Form form={form} layout="vertical" onFinish={handleFinish}>
-              <Form.Item
-                label={
-                  <span className="text-sm text-slate-900">
-                    {t("merchantEdit.name")}
-                  </span>
-                }
-                name="name"
-                rules={[
-                  {
-                    required: true,
-                    message: t("merchantEdit.namePlaceholder"),
-                  },
-                ]}
-              >
-                <Input
-                  placeholder={t("merchantEdit.namePlaceholder")}
-                  className="!border-0 !border-b !rounded-none !px-0 !pb-3"
-                />
-              </Form.Item>
+        {loading ? (
+          <div className="flex items-center justify-center min-h-[60vh]">
+            <Spin size="large" />
+          </div>
+        ) : (
+          <div className="px-4 space-y-4">
+            {/* 基本信息卡片 */}
+            <div className="bg-white rounded-lg shadow-sm p-4">
+              <Title level={5} className="!mb-3">
+                {t("merchantEdit.basicInfo")}
+              </Title>
+              <Form form={form} layout="vertical" onFinish={handleFinish}>
+                <Form.Item
+                  label={
+                    <span className="text-sm text-slate-900">
+                      {t("merchantEdit.name")}
+                    </span>
+                  }
+                  name="name"
+                  rules={[
+                    {
+                      required: true,
+                      message: t("merchantEdit.namePlaceholder"),
+                    },
+                  ]}
+                >
+                  <Input
+                    placeholder={t("merchantEdit.namePlaceholder")}
+                    className="!border-0 !border-b !rounded-none !px-0 !pb-3"
+                  />
+                </Form.Item>
 
-              <Form.Item
-                label={<span className="text-sm text-slate-900">商品分类</span>}
-                name="category_id"
-                rules={[{ required: true, message: "请选择商品分类" }]}
-              >
-                <Select
-                  placeholder="请选择商品分类"
-                  className="!border-0 !border-b !rounded-none !px-0"
-                  style={{ borderBottom: "1px solid #e2e8f0" }}
-                  open={selectOpen}
-                  onDropdownVisibleChange={setSelectOpen}
-                  onSelect={() => setSelectOpen(false)}
-                  options={categories.map((cat) => ({
-                    label: cat.name,
-                    value: parseInt(cat.id) || 0,
-                  }))}
-                />
-              </Form.Item>
+                <Form.Item
+                  label={
+                    <span className="text-sm text-slate-900">商品分类</span>
+                  }
+                  name="category_id"
+                  rules={[{ required: true, message: "请选择商品分类" }]}
+                >
+                  <Select
+                    placeholder="请选择商品分类"
+                    className="!border-0 !border-b !rounded-none !px-0"
+                    style={{ borderBottom: "1px solid #e2e8f0" }}
+                    open={selectOpen}
+                    onDropdownVisibleChange={setSelectOpen}
+                    onSelect={() => setSelectOpen(false)}
+                    options={categories.map((cat) => ({
+                      label: cat.name,
+                      value: parseInt(cat.id) || 0,
+                    }))}
+                  />
+                </Form.Item>
 
-              <Form.Item
-                label={
-                  <span className="text-sm text-slate-900">
-                    {t("merchantEdit.description")}
-                  </span>
-                }
-                name="description"
-              >
-                <Input.TextArea
-                  autoSize={{ minRows: 1, maxRows: 4 }}
-                  placeholder={t("merchantEdit.descriptionPlaceholder")}
-                  className="!border-0 !px-0 !pt-1 !border-b !rounded-none"
-                />
-              </Form.Item>
+                <Form.Item
+                  label={
+                    <span className="text-sm text-slate-900">
+                      {t("merchantEdit.description")}
+                    </span>
+                  }
+                  name="description"
+                >
+                  <Input.TextArea
+                    autoSize={{ minRows: 1, maxRows: 4 }}
+                    placeholder={t("merchantEdit.descriptionPlaceholder")}
+                    className="!border-0 !px-0 !pt-1 !border-b !rounded-none"
+                  />
+                </Form.Item>
 
-              <div className="space-y-2">
-                <Text className="text-sm text-slate-900">
-                  {t("merchantEdit.images")}
-                </Text>
-                <div className="flex gap-3 flex-wrap">
-                  {/* 显示已上传的图片 */}
-                  {imageUrl ? (
-                    <div className="relative group">
-                      <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
-                        <img
-                          src={`${API_BASE_URL}${imageUrl}`}
-                          alt={t("merchantEdit.images")}
-                          className="w-full h-full object-cover"
-                        />
+                <div className="space-y-2">
+                  <Text className="text-sm text-slate-900">
+                    {t("merchantEdit.images")}
+                  </Text>
+                  <div className="flex gap-3 flex-wrap">
+                    {/* 显示已上传的图片 */}
+                    {imageUrl ? (
+                      <div className="relative group">
+                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
+                          <img
+                            src={
+                              imageUrl.startsWith("http")
+                                ? imageUrl
+                                : `${API_BASE_URL}${imageUrl}`
+                            }
+                            alt={t("merchantEdit.images")}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={handleImageRemove}
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition-colors duration-200 z-10"
+                          aria-label={t("ariaLabels.deleteImage")}
+                        >
+                          <CloseCircleFilled className="text-xs" />
+                        </button>
+                        {/* 悬停遮罩 */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-xl pointer-events-none" />
                       </div>
-                      <button
-                        type="button"
-                        onClick={handleImageRemove}
-                        className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition-colors duration-200 z-10"
-                        aria-label={t("ariaLabels.deleteImage")}
+                    ) : (
+                      <Upload
+                        beforeUpload={(file) => {
+                          handleImageUpload(file);
+                          return false; // 阻止默认上传
+                        }}
+                        fileList={fileList}
+                        listType="picture-card"
+                        maxCount={1}
+                        accept="image/*"
+                        showUploadList={false}
+                        className="upload-wrapper"
                       >
-                        <CloseCircleFilled className="text-xs" />
-                      </button>
-                      {/* 悬停遮罩 */}
-                      <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-xl pointer-events-none" />
-                    </div>
-                  ) : (
-                    <Upload
-                      beforeUpload={(file) => {
-                        handleImageUpload(file);
-                        return false; // 阻止默认上传
-                      }}
-                      fileList={fileList}
-                      listType="picture-card"
-                      maxCount={1}
-                      accept="image/*"
-                      showUploadList={false}
-                      className="upload-wrapper"
-                    >
-                      <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-all duration-200 cursor-pointer group">
-                        {uploading ? (
-                          <>
-                            <div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mb-2" />
-                            <span className="text-xs text-slate-500">
-                              {t("merchantEdit.uploading")}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <div className="w-10 h-10 rounded-full bg-slate-200 group-hover:bg-slate-300 flex items-center justify-center transition-colors duration-200">
-                              <PlusOutlined className="text-lg text-slate-500 group-hover:text-slate-600" />
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </Upload>
-                  )}
-                </div>
-              </div>
-
-              {/* 价格信息 */}
-              <div className="mt-4 pt-4 border-t border-slate-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-slate-900">
-                    {t("merchantEdit.price")}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Form.Item
-                      name="price"
-                      noStyle
-                      rules={[
-                        {
-                          required: true,
-                          message: t("merchantEdit.priceRequired"),
-                        },
-                        {
-                          type: "number",
-                          transform: (value) =>
-                            value ? Number(value) : undefined,
-                          message: t("merchantEdit.priceRequired"),
-                        },
-                      ]}
-                    >
-                      $
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        placeholder={t("merchantEdit.pricePlaceholder")}
-                        className="!w-28 text-right"
-                      />
-                    </Form.Item>
+                        <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-all duration-200 cursor-pointer group">
+                          {uploading ? (
+                            <>
+                              <div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mb-2" />
+                              <span className="text-xs text-slate-500">
+                                {t("merchantEdit.uploading")}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-slate-200 group-hover:bg-slate-300 flex items-center justify-center transition-colors duration-200">
+                                <PlusOutlined className="text-lg text-slate-500 group-hover:text-slate-600" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </Upload>
+                    )}
                   </div>
                 </div>
-              </div>
-            </Form>
+
+                {/* 价格信息 */}
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-900">
+                      {t("merchantEdit.price")}($)
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <Form.Item
+                        name="price"
+                        noStyle
+                        rules={[
+                          {
+                            required: true,
+                            message: t("merchantEdit.priceRequired"),
+                          },
+                        ]}
+                      >
+                        <Input
+                          type="number"
+                          step="1"
+                          min="0"
+                          placeholder={t("merchantEdit.pricePlaceholder")}
+                          className="!w-28 text-right"
+                        />
+                      </Form.Item>
+                    </div>
+                  </div>
+                </div>
+              </Form>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {/* 底部保存按钮 */}

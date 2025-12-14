@@ -108,7 +108,8 @@
     "save": "保存",
     "back": "返回",
     "add": "添加",
-    "edit": "编辑"
+    "edit": "编辑",
+    "confirm": "确定"
   },
   "messages": {
     "connectWalletFirst": "请先连接钱包",
@@ -119,6 +120,10 @@
     "claimSuccess": "奖励领取成功！",
     "confirmSuccess": "确认收货成功！",
     "refundSuccess": "退款成功！",
+    "refundApplySuccess": "退款申请提交成功！",
+    "refundApplyFailed": "申请退款失败，请重试",
+    "refundNotAllowed": "该订单状态不允许申请退款",
+    "invalidOrderId": "无效的订单ID",
     "transactionCancelled": "交易已取消",
     "transactionFailed": "交易执行失败，请重试",
     "registerFailed": "注册失败，请重试",
@@ -139,7 +144,8 @@
     "createSuccess": "创建成功",
     "createFailed": "创建失败，请重试",
     "updateSuccess": "更新成功",
-    "updateFailed": "更新失败，请重试"
+    "updateFailed": "更新失败，请重试",
+    "merchantAddressIsSelf": "不能购买自己的商品"
   },
   "loading": {
     "confirmingReceipt": "正在确认收货...",
@@ -238,6 +244,7 @@
     "applyTip": "销毁 100U 的质押币，即可开店",
     "applyCta": "立即申请 →",
     "newMerchants": "新入驻商家",
+    "noMerchants": "暂无商家",
     "visitStore": "进店逛逛",
     "checkingStatus": "检查商家状态中...",
     "alreadyMerchant": "您已经是商家",
@@ -286,7 +293,11 @@
     "imageUploadSuccess": "图片上传成功",
     "imageUploadFailed": "图片上传失败",
     "productCreateSuccess": "商品创建成功",
-    "productCreateFailed": "商品创建失败"
+    "productCreateFailed": "商品创建失败",
+    "productUpdateSuccess": "商品更新成功",
+    "productUpdateFailed": "商品更新失败",
+    "productLoadFailed": "获取商品详情失败",
+    "productNotFound": "商品不存在"
   },
   "merchantApplyResult": {
     "title": "申请成为商家",
@@ -302,7 +313,7 @@
     "tabs": {
       "all": "全部",
       "allOrders": "全部订单",
-      "pending": "待付款",
+      "pending": "待处理",
       "delivering": "配送中",
       "completed": "已完成",
       "unfinished": "未完成"
@@ -312,6 +323,7 @@
     "viewDetails": "查看详情",
     "viewLogistics": "查看物流",
     "confirmReceipt": "确认收货",
+    "applyRefund": "申请退款",
     "cancelOrder": "取消订单",
     "payNow": "立即付款",
     "noOrders": "暂无订单",
@@ -320,7 +332,19 @@
     "companyPlaceholder": "请在这里输入快递公司",
     "upload": "上传",
     "statusCompleted": "已完成",
-    "statusUnfinished": "未完成"
+    "statusUnfinished": "未完成",
+    "buyerRefundRequest": "买家申请退款",
+    "refundStatusPending": "待处理",
+    "refundStatusRefunded": "已退款",
+    "refundStatusRejected": "已拒绝",
+    "approve": "同意",
+    "reject": "拒绝",
+    "approveRefund": "同意退款",
+    "rejectReasonLabel": "买家申请退款拒绝理由",
+    "rejectReasonPlaceholder": "请在这里输入拒绝理由...",
+    "rejectReasonRequired": "请输入拒绝理由",
+    "rejectRefundSuccess": "拒绝退款成功",
+    "rejectRefundFailed": "拒绝退款失败，请重试"
   },
   "checkout": {
     "title": "确认订单",
@@ -346,7 +370,7 @@
   },
   "productDetail": {
     "title": "商品详情",
-    "placeholderDesc": "占位符占位符占位符占位符占位符占位符占位符占位符",
+    "placeholderDesc": "此商品暂无介绍",
     "stock": "库存: {{count}}件",
     "introTitle": "商品介绍",
     "intro1": "这是一款精心设计的高品质商品，采用优质材料制作，具有出色的性能和质感。无论是日常使用还是专业需求，都能带来理想体验。",
@@ -357,6 +381,11 @@
     "deliveryFast": "支持极速发货",
     "buyNow": "立即购买",
     "connectWallet": "链接钱包"
+  },
+  "merchantStore": {
+    "title": "商家店铺",
+    "products": "商品列表",
+    "noProducts": "暂无商品"
   }
 }
 

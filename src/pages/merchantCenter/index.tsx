@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Button, Typography, Spin, message } from "antd";
 import { useTranslation } from "react-i18next";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { ROUTES } from "../../routes";
 import product from "@/assets/product.png";
 import backSvg from "@/assets/back.svg";
@@ -23,9 +23,10 @@ export type MerchantProduct = {
 
 export default function MerchantCenterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { t } = useTranslation("common");
   const { address } = useAuth();
-  const [activeTab, setActiveTab] = useState<"all" | "on" | "off">("on");
+  const [activeTab, setActiveTab] = useState<"all" | "on" | "off">("all");
   const [products, setProducts] = useState<MerchantProduct[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -59,7 +60,7 @@ export default function MerchantCenterPage() {
   useEffect(() => {
     let isMounted = true;
 
-    const loadProducts = async () => {
+    const loadProducts = async (forceRefresh = false) => {
       if (!address) {
         if (isMounted) {
           setProducts([]);
@@ -72,32 +73,15 @@ export default function MerchantCenterPage() {
       }
 
       try {
-        // 先获取商家ID
-        const merchantId = await api.getMerchantByWallet(address);
-        
-        if (!isMounted) return;
-
-        if (!merchantId) {
-          // 如果不是商家，商品列表为空
-          if (isMounted) {
-            setProducts([]);
-          }
-          return;
-        }
-
-        // 获取该商家的商品列表
-        const response = await api.getProducts({
-          merchant_id: merchantId,
-          page: 1,
-          page_size: 100, // 获取足够多的商品
-        });
+        // 获取当前商家的商品列表，如果是从编辑页面返回则强制刷新
+        const response = await api.getMyProducts({ force: forceRefresh });
 
         if (!isMounted) return;
 
         // 将API返回的商品转换为MerchantProduct格式
-        const merchantProducts = response.data.map(mapProductToMerchantProduct);
+        const merchantProductsList = response.data.map(mapProductToMerchantProduct);
         if (isMounted) {
-          setProducts(merchantProducts);
+          setProducts(merchantProductsList);
         }
       } catch (error: any) {
         // 如果是取消的请求，不更新状态
@@ -117,13 +101,15 @@ export default function MerchantCenterPage() {
       }
     };
 
-    loadProducts();
+    // 检查是否从编辑页面返回（通过 location state 判断）
+    const shouldRefresh = (location.state as any)?.refreshProducts === true;
+    loadProducts(shouldRefresh);
 
     // 清理函数：组件卸载时清理
     return () => {
       isMounted = false;
     };
-  }, [address]);
+  }, [address, location.pathname, location.state]);
 
   // 标签切换时滚动到顶部
   useEffect(() => {
@@ -219,9 +205,9 @@ export default function MerchantCenterPage() {
                       ¥{item.price}
                     </Text>
                     <div className="flex items-center justify-between text-xs">
-                      <span className="text-slate-500">
+                      {/* <span className="text-slate-500">
                         {t("merchantCenter.stock", { count: item.stock })}
-                      </span>
+                      </span> */}
                       <span
                         className={`flex items-center gap-1 ${
                           isOn ? "text-emerald-500" : "text-red-500"

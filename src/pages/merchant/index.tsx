@@ -1,36 +1,31 @@
-import { useState, useEffect } from "react";
-import { Button, Typography } from "antd";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Button, Typography, Spin, Empty } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useConnection } from "wagmi";
 import { ROUTES } from "../../routes";
 import { useMarketQuery } from "../../hooks/useMarketContract";
+import { api } from "../../lib/api";
+import type { MerchantListItem } from "../../lib/api";
+import product from "@/assets/product.png";
 
 const { Title, Text, Paragraph } = Typography;
-
-type Merchant = {
-  id: string;
-  name: string;
-  category: string;
-  cover: string;
-};
-
-const merchants: Merchant[] = Array.from({ length: 4 }, (_, index) => ({
-  id: `merchant-${index + 1}`,
-  name: "科技数码旗舰店",
-  category: "电脑与配件",
-  cover:
-    "https://res8.vmallres.com/pimages/FssCdnProxy/vmall_product_uom/pmsSalesFile/428_428_D81269DA3E29C2ABF67DED5D8385E20A.png",
-}));
 
 export default function MerchantPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
   const { address, isConnected } = useConnection();
   const [isScrolled, setIsScrolled] = useState(false);
-  
+  const [merchants, setMerchants] = useState<MerchantListItem[]>([]);
+  const [loadingMerchants, setLoadingMerchants] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
   const { useIsMerchant } = useMarketQuery();
-  const { data: isMerchant, isLoading: isCheckingMerchant } = useIsMerchant(address);
+  const { data: isMerchant, isLoading: isCheckingMerchant } =
+    useIsMerchant(address);
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -38,31 +33,119 @@ export default function MerchantPage() {
       setIsScrolled(window.scrollY > 10);
     };
 
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // 初始加载商家列表
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadInitialMerchants = async () => {
+      setLoadingMerchants(true);
+      try {
+        const response = await api.getActiveMerchants({
+          page: 0,
+          page_size: 20,
+        });
+        if (isMounted) {
+          setMerchants(response.data || []);
+          setCurrentPage(0);
+          setHasMore((response.data || []).length >= 20);
+        }
+      } catch (error) {
+        console.error("获取商家列表失败:", error);
+        if (isMounted) {
+          setMerchants([]);
+          setHasMore(false);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingMerchants(false);
+        }
+      }
+    };
+
+    loadInitialMerchants();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 加载更多商家
+  const loadMoreMerchants = useCallback(async () => {
+    if (loadingMerchants || !hasMore) return;
+
+    setLoadingMerchants(true);
+    try {
+      const response = await api.getActiveMerchants({
+        page: currentPage + 1,
+        page_size: 20,
+      });
+
+      if (response.data && response.data.length > 0) {
+        setMerchants((prev) => [...prev, ...response.data]);
+        setCurrentPage((prev) => prev + 1);
+        setHasMore(response.data.length >= 20);
+      } else {
+        setHasMore(false);
+      }
+    } catch (error) {
+      console.error("加载更多商家失败:", error);
+      setHasMore(false);
+    } finally {
+      setLoadingMerchants(false);
+    }
+  }, [currentPage, loadingMerchants, hasMore]);
+
+  // 使用 Intersection Observer 实现滚动加载
+  useEffect(() => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+    }
+
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingMerchants) {
+          loadMoreMerchants();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [hasMore, loadingMerchants, loadMoreMerchants]);
+
   return (
-    <div 
+    <div
       className="min-h-screen pb-24"
       style={{
-        backgroundImage: 'url(/bg.svg)',
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundAttachment: 'fixed',
+        backgroundImage: "url(/bg.svg)",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundAttachment: "fixed",
       }}
     >
       {/* Fixed Header */}
-      <div 
+      <div
         className="fixed top-0 left-0 right-0 z-50 shadow-sm transition-all duration-300"
-        style={{ 
-          background: isScrolled ? 'rgba(200, 223, 247, 0.8)' : 'transparent',
-          backdropFilter: isScrolled ? 'blur(10px)' : 'none',
+        style={{
+          background: isScrolled ? "rgba(200, 223, 247, 0.8)" : "transparent",
+          backdropFilter: isScrolled ? "blur(10px)" : "none",
         }}
       >
         <div className="p-4">
-          <Title level={3} className="!mb-0">
+          <Title level={5} className="!mb-0">
             {t("merchantPage.title")}
           </Title>
         </div>
@@ -71,133 +154,174 @@ export default function MerchantPage() {
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-20">
         <div className="px-4 space-y-6">
-        {/* 商家状态卡片 */}
-        {isCheckingMerchant ? (
-          <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
-            <div className="flex items-center justify-center py-4">
-              <Text className="text-slate-500">{t("merchantPage.checkingStatus")}</Text>
-            </div>
-          </section>
-        ) : isMerchant ? (
-          /* 已经是商家 - 显示商家管理入口 */
-          <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center">
-                <span className="text-3xl">✅</span>
-              </div>
-              <div className="flex-1">
-                <div className="text-base font-semibold text-slate-900">
-                  {t("merchantPage.alreadyMerchant")}
-                </div>
-                <Paragraph className="!mb-1 text-xs text-slate-500">
-                  {t("merchantPage.welcomeBack")}
-                </Paragraph>
-                <Text className="text-xs text-slate-400">
-                  {t("merchantPage.manageTip")}
+          {/* 商家状态卡片 */}
+          {isCheckingMerchant ? (
+            <section className="bg-white rounded-lg p-4 shadow-sm space-y-4">
+              <div className="flex items-center justify-center py-4">
+                <Text className="text-slate-500">
+                  {t("merchantPage.checkingStatus")}
                 </Text>
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-3 mt-2">
-              <Button
-                type="default"
-                block
-                shape="round"
-                className="!border-slate-900 !text-slate-900 h-11"
-                onClick={() => {
-                  navigate(ROUTES.MERCHANT_CENTER);
-                }}
-              >
-                {t("profile.links.merchant")}
-              </Button>
-              <Button
-                type="default"
-                block
-                shape="round"
-                className="!border-slate-900 !text-slate-900 h-11"
-                onClick={() => {
-                  navigate(ROUTES.MERCHANT_PRODUCT_EDIT.replace(':id', 'new'));
-                }}
-              >
-                {t("merchantApplyResult.uploadProduct")}
-              </Button>
-            </div>
-          </section>
-        ) : (
-          /* 不是商家 - 显示申请成为商家卡片 */
-          <section className="bg-white rounded-lg p-5 shadow-sm space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 rounded-2xl bg-slate-900/5 flex items-center justify-center">
-                <span className="text-3xl">🏬</span>
-              </div>
-              <div className="flex-1">
-                <div className="text-base font-semibold text-slate-900">
-                  {t("merchantPage.applyTitle")}
-                </div>
-                <Paragraph className="!mb-1 text-xs text-slate-500">
-                  {t("merchantPage.applySubtitle")}
-                </Paragraph>
-                <Text className="text-xs text-slate-400">
-                  {t("merchantPage.applyTip")}
-                </Text>
-              </div>
-            </div>
-            <Button
-              type="primary"
-              block
-              shape="round"
-              className="!bg-slate-900 !border-slate-900 h-11 mt-2"
-              onClick={() => navigate(ROUTES.MERCHANT_APPLY)}
-              disabled={!isConnected}
-            >
-              {!isConnected 
-                ? t("messages.connectWalletFirst")
-                : t("merchantPage.applyCta")}
-            </Button>
-          </section>
-        )}
-
-        {/* 新入驻商家列表 */}
-        <section className="space-y-4">
-          <Title level={5} className="!mb-0">
-            {t("merchantPage.newMerchants")}
-          </Title>
-
-          <div className="space-y-3">
-            {merchants.map((item) => (
-              <div
-                key={item.id}
-                className="bg-white rounded-lg px-4 py-3 flex items-center gap-4 shadow-sm"
-              >
-                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100">
-                  <img
-                    src={item.cover}
-                    alt={item.name}
-                    className="w-full h-full object-cover"
-                  />
+            </section>
+          ) : isMerchant ? (
+            /* 已经是商家 - 显示商家管理入口 */
+            <section className="bg-white rounded-lg p-4 shadow-sm space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-green-100 flex items-center justify-center">
+                  <span className="text-3xl">✅</span>
                 </div>
                 <div className="flex-1">
-                  <div className="text-sm font-semibold text-slate-900">
-                    {item.name}
+                  <div className="text-base font-semibold text-slate-900">
+                    {t("merchantPage.alreadyMerchant")}
                   </div>
-                  <div className="text-xs text-slate-500 mt-1">
-                    {item.category}
-                  </div>
+                  <Paragraph className="!mb-1 text-xs text-slate-500">
+                    {t("merchantPage.welcomeBack")}
+                  </Paragraph>
+                  <Text className="text-xs text-slate-400">
+                    {t("merchantPage.manageTip")}
+                  </Text>
                 </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 mt-2">
                 <Button
-                  size="small"
+                  type="default"
+                  block
                   shape="round"
-                  className="!border-slate-900 !text-slate-900"
+                  className="!border-slate-900 !text-slate-900 h-11"
+                  onClick={() => {
+                    navigate(ROUTES.MERCHANT_CENTER);
+                  }}
                 >
-                  {t("merchantPage.visitStore")}
+                  {t("profile.links.merchant")}
+                </Button>
+                <Button
+                  type="default"
+                  block
+                  shape="round"
+                  className="!border-slate-900 !text-slate-900 h-11"
+                  onClick={() => {
+                    navigate(
+                      ROUTES.MERCHANT_PRODUCT_EDIT.replace(":id", "new")
+                    );
+                  }}
+                >
+                  {t("merchantApplyResult.uploadProduct")}
                 </Button>
               </div>
-            ))}
-          </div>
-        </section>
+            </section>
+          ) : (
+            /* 不是商家 - 显示申请成为商家卡片 */
+            <section className="bg-white rounded-lg p-4 shadow-sm space-y-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-slate-900/5 flex items-center justify-center">
+                  <span className="text-3xl">🏬</span>
+                </div>
+                <div className="flex-1">
+                  <div className="text-base font-semibold text-slate-900">
+                    {t("merchantPage.applyTitle")}
+                  </div>
+                  <Paragraph className="!mb-1 text-xs text-slate-500">
+                    {t("merchantPage.applySubtitle")}
+                  </Paragraph>
+                  <Text className="text-xs text-slate-400">
+                    {t("merchantPage.applyTip")}
+                  </Text>
+                </div>
+              </div>
+              <Button
+                type="primary"
+                block
+                shape="round"
+                className="!bg-slate-900 !border-slate-900 h-11 mt-2"
+                onClick={() => navigate(ROUTES.MERCHANT_APPLY)}
+                disabled={!isConnected}
+              >
+                {!isConnected
+                  ? t("messages.connectWalletFirst")
+                  : t("merchantPage.applyCta")}
+              </Button>
+            </section>
+          )}
+
+          {/* 新入驻商家列表 */}
+          <section className="space-y-4">
+            <Title level={5} className="!mb-0">
+              {t("merchantPage.newMerchants")}
+            </Title>
+
+            {loadingMerchants && merchants.length === 0 ? (
+              <div className="flex justify-center items-center py-8">
+                <Spin size="large" />
+              </div>
+            ) : merchants.length === 0 ? (
+              <div className="bg-white rounded-lg p-8">
+                <Empty
+                  description={t("merchantPage.noMerchants") || "暂无商家"}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  {merchants.map((item) => (
+                    <div
+                      key={item.id}
+                      className="bg-white rounded-lg px-4 py-3 flex items-center gap-4 shadow-sm"
+                    >
+                      <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100">
+                        <img
+                          src={item.cover || item.image_url || product}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {item.name}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-1">
+                          {item.category || item.description || ""}
+                        </div>
+                      </div>
+                      <Button
+                        size="small"
+                        shape="round"
+                        className="!border-slate-900 !text-slate-900"
+                        onClick={() => {
+                          navigate(
+                            ROUTES.MERCHANT_STORE.replace(
+                              ":merchantId",
+                              String(item.id)
+                            )
+                          );
+                        }}
+                      >
+                        {t("merchantPage.visitStore")}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Load More Trigger */}
+                {hasMore && (
+                  <div ref={loadMoreRef} className="py-4 text-center">
+                    {loadingMerchants && (
+                      <Text className="text-slate-500">{t("loading.loading")}</Text>
+                    )}
+                  </div>
+                )}
+
+                {!hasMore && merchants.length > 0 && (
+                  <div className="py-4 text-center">
+                    <Text className="text-slate-500">
+                      {t("loading.noMoreProducts")}
+                    </Text>
+                  </div>
+                )}
+              </>
+            )}
+          </section>
         </div>
       </div>
     </div>
   );
 }
-
-
