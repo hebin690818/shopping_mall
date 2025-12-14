@@ -139,7 +139,7 @@ export default function SettingsPage() {
                         )
                       }
                     >
-                      {t("common.edit") || "编辑"}
+                      {t("common.edit")}
                     </button>
                   )}
                 </div>
@@ -167,7 +167,7 @@ export default function SettingsPage() {
                     onClick={() => navigate(ROUTES.ADDRESS_EDIT)}
                   >
                     <Text className="block text-xs text-slate-500">
-                      {t("common.add") || "添加"}
+                      {t("common.add")}
                     </Text>
                   </button>
                 )}

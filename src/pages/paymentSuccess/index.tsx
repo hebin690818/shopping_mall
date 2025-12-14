@@ -175,7 +175,7 @@ export default function PaymentSuccessPage({
                 shape="round"
                 className="!h-12 !bg-slate-900 !border-slate-900"
                 type="primary"
-                onClick={() => navigate(ROUTES.ORDERS)}
+                onClick={() => navigate(ROUTES.ORDERS, { state: { refresh: true } })}
               >
                 {t("paymentSuccess.viewOrders")}
               </Button>

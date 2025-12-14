@@ -245,7 +245,7 @@ export interface Product {
   id: string;
   name: string;
   price: string;
-  image: string;
+  image_url: string;
   category_id?: number;
   merchant_id?: number;
   [key: string]: any; // 允许其他字段
@@ -366,7 +366,8 @@ export type OrderStatusAPI =
   | "shipped"
   | "completed"
   | "refund_requested"
-  | "refunded";
+  | "refunded"
+  | "refund_rejected";
 
 // 获取买家订单请求参数
 export interface GetBuyerOrdersParams {
@@ -386,35 +387,38 @@ export interface GetMerchantOrdersParams {
 
 // API订单类型（后端返回的格式）
 export interface OrderAPI {
+  // 图片中实际存在的字段
   id: string | number;
-  order_number?: string;
-  orderNumber?: string;
-  date?: string;
+  order_no?: string;
   created_at?: string;
+  updated_at?: string;
   status: OrderStatusAPI;
-  product?: {
-    id?: string | number;
-    name?: string;
-    image?: string;
-    image_url?: string;
-    price?: string | number;
-    store?: string;
-    merchant_name?: string;
-    quantity?: number;
-  };
-  total?: string | number;
-  payment_amount?: string | number;
-  paymentAmount?: string | number;
-  logistics_company?: string;
-  logisticsCompany?: string;
-  logistics_number?: string;
-  logisticsNumber?: string;
-  shipping_time?: string;
-  shippingTime?: string;
-  payment_time?: string;
-  paymentTime?: string;
+  price?: string | number;
+  amount?: number;
+  total_price?: string | number;
+  tracking_number?: string;
+  shipped_at?: string;
   order_index?: string | number;
-  orderIndex?: string | number;
+  refund_rejection_reason?: string;
+  refund_reason?: string;
+  refund_rejected_at?: string;
+  refund_request_at?: string;
+  refunded_at?: string;
+  block_number?: string | number;
+  buyer_address?: string;
+  chain_order_id?: string | number;
+  merchant_address?: string;
+  merchant_id?: string | number;
+  tx_hash?: string;
+  user_id?: string | number;
+  // 前端显示需要的字段（可能来自其他API或关联数据）
+  name?: string;
+  image?: string;
+  image_url?: string;
+  store?: string;
+  merchant_name?: string;
+  product_image_url?: string; // 商品图片URL
+  product_name?: string; // 商品名称
   [key: string]: any; // 允许其他字段
 }
 

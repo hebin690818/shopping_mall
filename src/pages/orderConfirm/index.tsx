@@ -4,6 +4,7 @@ import { MinusOutlined, PlusOutlined, RightOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useConnection } from "wagmi";
+import { maxUint256 } from "viem";
 import { ROUTES } from "../../routes";
 import { useGlobalLoading } from "../../contexts/LoadingProvider";
 import { useMarketContract } from "../../hooks/useMarketContract";
@@ -12,7 +13,6 @@ import { MARKET_CONTRACT_ADDRESS, API_BASE_URL } from "../../lib/config";
 import {
   needsApproval,
   parseTokenAmount,
-  formatTokenAmount,
 } from "../../lib/contractUtils";
 import backSvg from "@/assets/back.svg";
 import { api, type Product, type Address } from "@/lib/api";
@@ -53,14 +53,22 @@ export default function OrderConfirmPage() {
       } else {
         setShippingAddress(null);
       }
-    } catch (error) {
+    } catch (error: any) {
+      // 忽略请求被取消的错误（AbortError），这是正常的，比如组件卸载或路由变化时
+      if (error?.name === "AbortError" || error?.message?.includes("aborted")) {
+        return;
+      }
       console.error("加载收货地址失败:", error);
     }
   };
 
   // 监听路由变化，从地址编辑页面返回时刷新地址
   useEffect(() => {
-    loadAddresses();
+    const fetchAddresses = async () => {
+      await loadAddresses();
+    };
+    
+    fetchAddresses();
   }, [location.pathname]);
 
   // 从上一页传递的 state 中获取商品数据
@@ -148,26 +156,23 @@ export default function OrderConfirmPage() {
       const priceWei = parseTokenAmount(priceStr);
       const totalPriceWei = priceWei * BigInt(quantity);
 
-      // 计算授权金额（添加10%缓冲，避免精度问题）
-      const approveAmount = (totalPriceWei * 110n) / 100n;
+      // 检查是否需要授权（使用无限授权，避免每次都需要授权）
       const needsApprove = needsApproval(
         allowance && typeof allowance === "bigint" ? allowance : undefined,
         totalPriceWei
       );
 
-      // 1. 检查并授权代币
+      // 1. 检查并授权代币（使用无限授权）
       if (needsApprove) {
         showLoading(t("loading.approving"));
-        // 使用格式化的总价字符串，确保精度
-        const approveAmountStr = formatTokenAmount(approveAmount, 18, 18);
+        // 使用无限授权，直接传入 maxUint256
         const approveReceipt = await approve(
           MARKET_CONTRACT_ADDRESS,
-          approveAmountStr
+          maxUint256
         );
 
         // 检查授权交易状态
         if (approveReceipt.status === "success") {
-          message.success(t("messages.approveSuccess"));
         } else {
           throw new Error(t("messages.approveConfirmFailed"));
         }
@@ -186,7 +191,6 @@ export default function OrderConfirmPage() {
       if (receipt.status === "success") {
         hideLoading();
         setIsSubmitting(false);
-        message.success(t("messages.orderCreateSuccess"));
         navigate(ROUTES.PAYMENT_SUCCESS);
       } else {
         throw new Error(t("messages.transactionFailed"));

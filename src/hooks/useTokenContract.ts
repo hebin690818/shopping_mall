@@ -17,13 +17,13 @@ export const useTokenContract = () => {
   /**
    * 授权代币
    * @param spender 被授权地址
-   * @param amount 授权数量（字符串格式，如 "100"）
-   * @param decimals 小数位数，默认18
+   * @param amount 授权数量（字符串格式，如 "100"，或 BigInt 用于无限授权）
+   * @param decimals 小数位数，默认18（当 amount 为 BigInt 时忽略）
    * @returns 交易收据
    */
   const approve = async (
     spender: Address,
-    amount: string,
+    amount: string | bigint,
     decimals = 18
   ): Promise<TransactionReceipt> => {
     if (!address) {
@@ -33,7 +33,8 @@ export const useTokenContract = () => {
       throw new Error('客户端未初始化');
     }
 
-    const amountWei = parseUnits(amount, decimals);
+    // 如果传入的是 BigInt，直接使用；否则解析字符串
+    const amountWei = typeof amount === 'bigint' ? amount : parseUnits(amount, decimals);
 
     // 1. 模拟合约调用
     const { request } = await publicClient.simulateContract({

@@ -22,7 +22,7 @@ export default function ProductDetailPage() {
   // 如果没有传递数据，则回退到使用 id 从 API 获取（这里暂时使用 fallback）
   const displayProduct = product || {
     id: id || "default",
-    name: "商品加载中...",
+    name: t("loading.loading"),
     price: "$0.00",
     image: "",
     image_url: "",

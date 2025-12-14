@@ -31,7 +31,6 @@ export const useRewardContract = () => {
       address: REWARD_CONTRACT_ADDRESS,
       abi: rewardAbi,
       functionName: 'claim',
-      args: [],
     });
 
     // 2. 写入合约

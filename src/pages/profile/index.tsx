@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Card, Typography, Button, Progress, message } from "antd";
+import { Card, Typography, Button, message } from "antd";
 import { useTranslation } from "react-i18next";
 import { useConnection } from "wagmi";
 import { useNavigate } from "react-router-dom";
@@ -11,10 +11,7 @@ import {
 import { useTokenQuery } from "../../hooks/useTokenContract";
 import { useMarketQuery } from "../../hooks/useMarketContract";
 import { useGlobalLoading } from "../../contexts/LoadingProvider";
-import {
-  formatTokenAmount,
-  calculatePercentage,
-} from "../../lib/contractUtils";
+import { formatTokenAmount } from "../../lib/contractUtils";
 import { CopyOutlined, RightOutlined } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
@@ -75,7 +72,7 @@ export default function ProfilePage() {
     try {
       showLoading(t("loading.claimingReward"));
       const receipt = await claim();
-      
+
       // 检查交易状态
       if (receipt.status === "success") {
         hideLoading();
@@ -90,7 +87,8 @@ export default function ProfilePage() {
       console.error("领取奖励失败:", error);
       hideLoading();
       setIsClaiming(false);
-      const errorMessage = error?.message || error?.shortMessage || t("messages.claimFailed");
+      const errorMessage =
+        error?.message || error?.shortMessage || t("messages.claimFailed");
       const errorStr = String(errorMessage).toLowerCase();
       if (
         errorStr.includes("rejected") ||
@@ -119,13 +117,6 @@ export default function ProfilePage() {
     pendingReward && typeof pendingReward === "bigint"
       ? formatTokenAmount(pendingReward)
       : "0.00";
-  const dividendProgress =
-    userPower &&
-    pendingReward &&
-    typeof userPower === "bigint" &&
-    typeof pendingReward === "bigint"
-      ? Math.min(100, calculatePercentage(pendingReward, userPower))
-      : 0;
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -264,12 +255,6 @@ export default function ProfilePage() {
                 <Text className="text-xs text-slate-500 block mb-2">
                   {t("profile.dividend.note")}
                 </Text>
-                <Progress
-                  percent={dividendProgress}
-                  showInfo={false}
-                  strokeColor="#475569"
-                  className="!mb-0"
-                />
               </div>
             </div>
           </Card>
@@ -283,7 +268,9 @@ export default function ProfilePage() {
                     className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
                     onClick={() => navigate(ROUTES.ORDERS_LIST)}
                   >
-                    <Text className="text-base">{t("profile.links.orders")}</Text>
+                    <Text className="text-base">
+                      {t("profile.links.orders")}
+                    </Text>
                     <RightOutlined className="text-slate-400" />
                   </button>
                 </Card>
@@ -292,7 +279,9 @@ export default function ProfilePage() {
                     className="w-full flex items-center justify-between hover:bg-slate-50 transition-colors rounded-xl"
                     onClick={() => navigate(ROUTES.MERCHANT_CENTER)}
                   >
-                    <Text className="text-base">{t("profile.links.merchant")}</Text>
+                    <Text className="text-base">
+                      {t("profile.links.merchant")}
+                    </Text>
                     <RightOutlined className="text-slate-400" />
                   </button>
                 </Card>

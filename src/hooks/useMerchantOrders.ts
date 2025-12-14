@@ -15,7 +15,12 @@ const mapApiStatusToOrderStatus = (apiStatus: OrderStatusAPI): OrderStatus => {
     case "completed":
       return "completed";
     case "refund_requested":
+      // 退款申请中，保持原状态（pending 或 shipped）
+      // 这里需要根据业务逻辑判断，暂时映射为 delivering（因为通常是从 shipped 状态申请的）
+      return "delivering";
     case "refunded":
+    case "refund_rejected":
+      // 退款完成（已退款或已拒绝），订单完成（终态）
       return "completed";
     default:
       return "pending";
@@ -24,52 +29,53 @@ const mapApiStatusToOrderStatus = (apiStatus: OrderStatusAPI): OrderStatus => {
 
 // 将API订单数据转换为前端订单格式
 const mapApiOrderToOrder = (apiOrder: any): Order => {
-  const productData = apiOrder.product || {};
-
   return {
     id: String(apiOrder.id || ""),
-    orderNumber:
-      apiOrder.order_number || apiOrder.orderNumber || `ORD-${apiOrder.id}`,
-    date: apiOrder.date || apiOrder.created_at?.split("T")[0] || "",
+    orderNumber: apiOrder.order_no || `ORD-${apiOrder.id}`,
+    date: apiOrder.created_at?.split("T")[0] || "",
     status: mapApiStatusToOrderStatus(apiOrder.status),
     apiStatus: apiOrder.status, // 保存原始API状态
-    product: {
-      image: productData.image || productData.image_url || productImage,
-      name: productData.name || "",
-      store: productData.store || productData.merchant_name || "",
-      price: String(productData.price || "0"),
-      quantity: productData.quantity || 1,
-    },
-    total: String(apiOrder.total || "0"),
-    paymentAmount: apiOrder.payment_amount
-      ? String(apiOrder.payment_amount)
-      : apiOrder.paymentAmount
-      ? String(apiOrder.paymentAmount)
-      : undefined,
-    logisticsCompany: apiOrder.logistics_company || apiOrder.logisticsCompany,
-    logisticsNumber: apiOrder.logistics_number || apiOrder.logisticsNumber,
-    shippingTime: apiOrder.shipping_time || apiOrder.shippingTime,
-    paymentTime: apiOrder.payment_time || apiOrder.paymentTime,
+    image: apiOrder.image || apiOrder.image_url || productImage,
+    name: apiOrder.name || "",
+    store: apiOrder.store || apiOrder.merchant_name || "",
+    price: String(apiOrder.price || "0"),
+    quantity: apiOrder.amount || 1,
+    total: String(apiOrder.total_price || "0"),
+    paymentAmount: apiOrder.total_price ? String(apiOrder.total_price) : undefined,
+    logisticsCompany: undefined,
+    logisticsNumber: undefined,
+    shippingTime: apiOrder.shipped_at,
+    paymentTime: undefined,
     orderIndex: apiOrder.order_index
-      ? BigInt(apiOrder.order_index)
-      : apiOrder.orderIndex
-      ? typeof apiOrder.orderIndex === "string"
-        ? BigInt(apiOrder.orderIndex)
-        : BigInt(apiOrder.orderIndex)
+      ? typeof apiOrder.order_index === "string"
+        ? BigInt(apiOrder.order_index)
+        : BigInt(apiOrder.order_index)
       : undefined,
+    tracking_number: apiOrder.tracking_number,
+    updated_at: apiOrder.updated_at,
+    created_at: apiOrder.created_at,
+    refund_rejection_reason: apiOrder.refund_rejection_reason,
+    product_image_url: apiOrder.product_image_url,
+    product_name: apiOrder.product_name,
   };
 };
 
 // 根据标签获取状态筛选参数
-const getStatusFilter = (activeTab: string): OrderStatusAPI | undefined => {
+const getStatusFilter = (
+  activeTab: string
+): { status?: OrderStatusAPI; statuses?: OrderStatusAPI[] } => {
   if (activeTab === "completed") {
-    return "completed";
+    return { status: "completed" };
   }
   if (activeTab === "pending") {
-    return "refund_requested";
+    return { status: "refund_requested" };
+  }
+  if (activeTab === "refund") {
+    // 退款 tab：查询所有退款相关状态
+    return { statuses: ["refund_requested", "refunded", "refund_rejected"] };
   }
   // "all" 和 "unfinished" 不传status，获取所有订单后在前端过滤
-  return undefined;
+  return {};
 };
 
 // 过滤订单（用于前端筛选）
@@ -83,6 +89,15 @@ const filterOrders = (orders: Order[], activeTab: string): Order[] => {
   }
   if (activeTab === "pending") {
     return orders.filter((order) => order.apiStatus === "refund_requested");
+  }
+  if (activeTab === "refund") {
+    // 退款 tab：筛选所有退款相关状态的订单
+    return orders.filter(
+      (order) =>
+        order.apiStatus === "refund_requested" ||
+        order.apiStatus === "refunded" ||
+        order.apiStatus === "refund_rejected"
+    );
   }
   return orders;
 };
@@ -98,7 +113,7 @@ interface UseMerchantOrdersReturn {
   loading: boolean;
   error: Error | null;
   hasMore: boolean;
-  refresh: () => Promise<void>;
+  refresh: (force?: boolean) => Promise<void>;
   loadMore: () => Promise<void>;
 }
 
@@ -120,7 +135,7 @@ export function useMerchantOrders(
 
   // 获取订单数据
   const fetchOrders = useCallback(
-    async (page: number, append = false) => {
+    async (page: number, append = false, force = false) => {
       // 防止重复请求
       if (loadingRef.current) {
         return;
@@ -140,12 +155,14 @@ export function useMerchantOrders(
       abortControllerRef.current = abortController;
 
       try {
-        const status = getStatusFilter(activeTab);
+        const { status, statuses } = getStatusFilter(activeTab);
 
         const response: OrdersResponse = await api.getMerchantOrders({
           page,
           page_size: pageSize,
           status,
+          statuses,
+          force, // 支持强制刷新
         });
 
         // 检查是否被取消
@@ -201,10 +218,10 @@ export function useMerchantOrders(
   );
 
   // 刷新订单列表
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (force = false) => {
     setCurrentPage(1);
     setHasMore(true);
-    await fetchOrders(1, false);
+    await fetchOrders(1, false, force);
   }, [fetchOrders]);
 
   // 加载更多
@@ -241,4 +258,3 @@ export function useMerchantOrders(
     loadMore,
   };
 }
-

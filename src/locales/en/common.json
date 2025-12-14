@@ -109,7 +109,8 @@
     "back": "Back",
     "add": "Add",
     "edit": "Edit",
-    "confirm": "Confirm"
+    "confirm": "Confirm",
+    "cancel": "Cancel"
   },
   "messages": {
     "connectWalletFirst": "Please connect wallet first",
@@ -191,7 +192,11 @@
     "logisticsCompany": "Logistics Company",
     "logisticsNo": "Tracking Number",
     "shipTime": "Shipping Time",
-    "payTime": "Payment Time"
+    "payTime": "Payment Time",
+    "updateTime": "Update Time",
+    "refundRejectionReason": "Refund Rejection Reason",
+    "confirmRefundMessage": "Are you sure you want to refund to the buyer? This action cannot be undone.",
+    "confirmRejectRefundMessage": "Are you sure you want to reject the refund? This action cannot be undone."
   },
   "ariaLabels": {
     "back": "Back",
@@ -287,6 +292,8 @@
     "priceRequired": "Please enter price",
     "pricePlaceholder": "0",
     "priceUnit": "CNY",
+    "category": "Product Category",
+    "categoryPlaceholder": "Please select a product category",
     "categoryRequired": "Please select a product category",
     "imageRequired": "Please upload product image",
     "categoryLoadFailed": "Failed to load categories",
@@ -316,10 +323,11 @@
       "pending": "Pending",
       "delivering": "In Delivery",
       "completed": "Completed",
-      "unfinished": "Unfinished"
+      "unfinished": "Unfinished",
+      "refund": "Refund"
     },
     "orderNo": "Order No: {{no}}",
-    "totalPrice": "Total: ¥{{amount}}",
+    "totalPrice": "Total: ${{amount}}",
     "viewDetails": "View Details",
     "viewLogistics": "View Logistics",
     "confirmReceipt": "Confirm Receipt",
@@ -344,7 +352,12 @@
     "rejectReasonPlaceholder": "Please enter the rejection reason here...",
     "rejectReasonRequired": "Please enter the rejection reason",
     "rejectRefundSuccess": "Refund rejected successfully",
-    "rejectRefundFailed": "Failed to reject refund, please try again"
+    "rejectRefundFailed": "Failed to reject refund, please try again",
+    "status": {
+      "refundRequested": "Refund Requested",
+      "refunded": "Refunded",
+      "refundRejected": "Refund Rejected"
+    }
   },
   "checkout": {
     "title": "Confirm Order",

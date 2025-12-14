@@ -211,7 +211,7 @@ export default function MerchantStorePage() {
             ) : merchant ? (
               merchant.name
             ) : (
-              t("merchantStore.title") || "商家店铺"
+              t("merchantStore.title")
             )}
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function MerchantStorePage() {
             ) : products.length === 0 ? (
               <div className="bg-white rounded-lg p-8">
                 <Empty
-                  description={t("merchantStore.noProducts") || "暂无商品"}
+                  description={t("merchantStore.noProducts")}
                 />
               </div>
             ) : (

@@ -109,7 +109,8 @@
     "back": "返回",
     "add": "添加",
     "edit": "编辑",
-    "confirm": "确定"
+    "confirm": "确定",
+    "cancel": "取消"
   },
   "messages": {
     "connectWalletFirst": "请先连接钱包",
@@ -191,7 +192,11 @@
     "logisticsCompany": "物流公司",
     "logisticsNo": "物流单号",
     "shipTime": "发货时间",
-    "payTime": "付款时间"
+    "payTime": "付款时间",
+    "updateTime": "更新时间",
+    "refundRejectionReason": "退款拒绝原因",
+    "confirmRefundMessage": "确定要退款给买家吗？此操作不可撤销。",
+    "confirmRejectRefundMessage": "确定要拒绝退款吗？此操作不可撤销。"
   },
   "ariaLabels": {
     "back": "返回",
@@ -287,6 +292,8 @@
     "priceRequired": "请输入价格",
     "pricePlaceholder": "0",
     "priceUnit": "元",
+    "category": "商品分类",
+    "categoryPlaceholder": "请选择商品分类",
     "categoryRequired": "请选择商品分类",
     "imageRequired": "请上传商品图片",
     "categoryLoadFailed": "获取分类列表失败",
@@ -316,10 +323,11 @@
       "pending": "待处理",
       "delivering": "配送中",
       "completed": "已完成",
-      "unfinished": "未完成"
+      "unfinished": "未完成",
+      "refund": "退款"
     },
     "orderNo": "订单号: {{no}}",
-    "totalPrice": "总计: ¥{{amount}}",
+    "totalPrice": "总计: ${{amount}}",
     "viewDetails": "查看详情",
     "viewLogistics": "查看物流",
     "confirmReceipt": "确认收货",
@@ -344,7 +352,12 @@
     "rejectReasonPlaceholder": "请在这里输入拒绝理由...",
     "rejectReasonRequired": "请输入拒绝理由",
     "rejectRefundSuccess": "拒绝退款成功",
-    "rejectRefundFailed": "拒绝退款失败，请重试"
+    "rejectRefundFailed": "拒绝退款失败，请重试",
+    "status": {
+      "refundRequested": "退款申请中",
+      "refunded": "已退款",
+      "refundRejected": "退款已拒绝"
+    }
   },
   "checkout": {
     "title": "确认订单",

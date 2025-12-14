@@ -208,6 +208,10 @@ export default function MerchantProductEditPage() {
           productId = parseInt(id, 10);
         }
 
+        // 保持商品原有状态，如果原来没有状态则默认为 published（上架）
+        const currentStatus = (product as any)?.status;
+        const statusToUpdate = currentStatus || "published";
+        
         await api.updateProduct({
           id: productId,
           category_id: values.category_id,
@@ -215,7 +219,7 @@ export default function MerchantProductEditPage() {
           image_url: imageUrl,
           name: values.name,
           price: Number(values.price),
-          status: (product as any)?.status || "on",
+          status: statusToUpdate,
         });
       } else {
         // 新增模式：创建商品
@@ -236,7 +240,7 @@ export default function MerchantProductEditPage() {
       message.error(
         error.message ||
           (isEditMode
-            ? t("merchantEdit.productUpdateFailed") || "商品更新失败"
+            ? t("merchantEdit.productUpdateFailed")
             : t("merchantEdit.productCreateFailed"))
       );
     } finally {
@@ -299,13 +303,17 @@ export default function MerchantProductEditPage() {
 
                 <Form.Item
                   label={
-                    <span className="text-sm text-slate-900">商品分类</span>
+                    <span className="text-sm text-slate-900">
+                      {t("merchantEdit.category")}
+                    </span>
                   }
                   name="category_id"
-                  rules={[{ required: true, message: "请选择商品分类" }]}
+                  rules={[
+                    { required: true, message: t("merchantEdit.categoryRequired") },
+                  ]}
                 >
                   <Select
-                    placeholder="请选择商品分类"
+                    placeholder={t("merchantEdit.categoryPlaceholder")}
                     className="!border-0 !border-b !rounded-none !px-0"
                     style={{ borderBottom: "1px solid #e2e8f0" }}
                     open={selectOpen}

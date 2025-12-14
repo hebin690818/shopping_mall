@@ -47,7 +47,7 @@ export default function AddressEditPage() {
             recipient_name: address.recipient_name,
           });
         } else if (isMounted) {
-          message.error(t("messages.loadFailed") || "加载地址失败");
+          message.error(t("messages.loadFailed"));
           navigate(-1);
         }
       } catch (error: any) {
@@ -56,7 +56,7 @@ export default function AddressEditPage() {
         }
         console.error("加载地址失败:", error);
         if (isMounted) {
-          message.error(t("messages.loadFailed") || "加载地址失败");
+          message.error(t("messages.loadFailed"));
           navigate(-1);
         }
       } finally {
@@ -81,8 +81,8 @@ export default function AddressEditPage() {
   }) => {
     showLoading(
       isEditMode
-        ? t("loading.updating") || "正在更新..."
-        : t("loading.creating") || "正在创建..."
+        ? t("loading.updating")
+        : t("loading.creating")
     );
 
     try {
@@ -97,8 +97,8 @@ export default function AddressEditPage() {
       message.error(
         error?.message ||
           (isEditMode
-            ? t("messages.updateFailed") || "更新失败"
-            : t("messages.createFailed") || "创建失败")
+            ? t("messages.updateFailed")
+            : t("messages.createFailed"))
       );
     } finally {
       hideLoading();
@@ -151,7 +151,7 @@ export default function AddressEditPage() {
                 rules={[
                   {
                     required: true,
-                    message: t("addressEdit.receiverRequired") || "请输入收件人姓名",
+                    message: t("addressEdit.receiverRequired"),
                   },
                 ]}
               >
@@ -173,11 +173,11 @@ export default function AddressEditPage() {
                 rules={[
                   {
                     required: true,
-                    message: t("addressEdit.phoneRequired") || "请输入联系电话",
+                    message: t("addressEdit.phoneRequired"),
                   },
                   {
                     pattern: /^[\d\s\-+()]+$/,
-                    message: t("addressEdit.phoneInvalid") || "请输入有效的电话号码",
+                    message: t("addressEdit.phoneInvalid"),
                   },
                 ]}
               >
@@ -199,7 +199,7 @@ export default function AddressEditPage() {
                 rules={[
                   {
                     required: true,
-                    message: t("addressEdit.addressRequired") || "请输入收货地址",
+                    message: t("addressEdit.addressRequired"),
                   },
                 ]}
               >

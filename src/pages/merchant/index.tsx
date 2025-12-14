@@ -256,7 +256,7 @@ export default function MerchantPage() {
             ) : merchants.length === 0 ? (
               <div className="bg-white rounded-lg p-8">
                 <Empty
-                  description={t("merchantPage.noMerchants") || "暂无商家"}
+                  description={t("merchantPage.noMerchants")}
                 />
               </div>
             ) : (
