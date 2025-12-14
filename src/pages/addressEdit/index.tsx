@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useState, useEffect } from "react";
 import backSvg from "@/assets/back.svg";
-import { api, type Address } from "../../lib/api";
+import { api } from "../../lib/api";
 import { useGlobalLoading } from "../../contexts/LoadingProvider";
 
 const { Title, Text } = Typography;

@@ -8,7 +8,7 @@ import type { Product, MerchantDetail } from "../../lib/api";
 import { API_BASE_URL } from "../../lib/config";
 import backSvg from "@/assets/back.svg";
 
-const { Title, Text } = Typography;
+const { Text } = Typography;
 
 export default function MerchantStorePage() {
   const { merchantId } = useParams<{ merchantId: string }>();
@@ -249,9 +249,7 @@ export default function MerchantStorePage() {
               </div>
             ) : products.length === 0 ? (
               <div className="bg-white rounded-lg p-8">
-                <Empty
-                  description={t("merchantStore.noProducts")}
-                />
+                <Empty description={t("merchantStore.noProducts")} />
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
