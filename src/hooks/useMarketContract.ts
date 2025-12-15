@@ -1,5 +1,5 @@
 import { useReadContract, usePublicClient, useWalletClient } from 'wagmi';
-import { marketAbi, MARKET_CONTRACT_ADDRESS } from '../abi/market';
+import { marketAbi, MARKET_CONTRACT_ADDRESS } from '@/abi/market';
 import { useConnection } from 'wagmi';
 import type { Address } from 'viem';
 import type { TransactionReceipt } from 'viem';

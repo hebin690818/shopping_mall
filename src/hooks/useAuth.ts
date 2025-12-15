@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useConnection, useSignMessage } from 'wagmi';
-import { walletLogin, generateSignMessage } from '../lib/auth';
-import { getToken, removeToken, apiCache } from '../lib/api';
+import { walletLogin, generateSignMessage } from '@/lib/auth';
+import { getToken, removeToken, apiCache } from '@/lib/api';
 
 export const useAuth = () => {
   const { isConnected, address } = useConnection();

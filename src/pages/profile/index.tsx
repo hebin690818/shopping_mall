@@ -3,15 +3,15 @@ import { Card, Typography, Button, message } from "antd";
 import { useTranslation } from "react-i18next";
 import { useConnection } from "wagmi";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../routes";
+import { ROUTES } from "@/routes";
 import {
   useRewardContract,
   useRewardQuery,
-} from "../../hooks/useRewardContract";
-import { useTokenQuery } from "../../hooks/useTokenContract";
-import { useMarketQuery } from "../../hooks/useMarketContract";
-import { useGlobalLoading } from "../../contexts/LoadingProvider";
-import { formatTokenAmount } from "../../lib/contractUtils";
+} from "@/hooks/useRewardContract";
+import { useTokenQuery } from "@/hooks/useTokenContract";
+import { useMarketQuery } from "@/hooks/useMarketContract";
+import { useGlobalLoading } from "@/contexts/LoadingProvider";
+import { formatTokenAmount } from "@/lib/contractUtils";
 import { CopyOutlined, RightOutlined } from "@ant-design/icons";
 
 const { Text, Title } = Typography;

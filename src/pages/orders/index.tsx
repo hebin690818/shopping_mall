@@ -3,7 +3,7 @@ import { Button, Typography, message } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useConnection } from "wagmi";
-import { ROUTES } from "../../routes";
+import { ROUTES } from "@/routes";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,
@@ -12,9 +12,9 @@ import {
   CloseCircleOutlined,
   DollarOutlined,
 } from "@ant-design/icons";
-import { useMarketContract } from "../../hooks/useMarketContract";
-import { useGlobalLoading } from "../../contexts/LoadingProvider";
-import { api, type OrderAPI, type OrderStatusAPI } from "../../lib/api";
+import { useMarketContract } from "@/hooks/useMarketContract";
+import { useGlobalLoading } from "@/contexts/LoadingProvider";
+import { api, type OrderAPI, type OrderStatusAPI } from "@/lib/api";
 import product from "@/assets/product.png";
 
 const { Text, Title } = Typography;

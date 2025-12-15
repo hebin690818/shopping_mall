@@ -12,8 +12,8 @@ import {
 import { PlusOutlined, CloseCircleFilled } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
-import { ROUTES } from "../../routes";
-import { api, type Category, type Product } from "../../lib/api";
+import { ROUTES } from "@/routes";
+import { api, type Category, type Product } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
 import type { UploadFile } from "antd/es/upload/interface";
 import { API_BASE_URL } from "@/lib/config";

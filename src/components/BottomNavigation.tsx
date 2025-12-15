@@ -1,7 +1,7 @@
 import { HomeOutlined, ShopOutlined, ShoppingCartOutlined, UserOutlined } from '@ant-design/icons'
 import { useTranslation } from 'react-i18next'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { ROUTES } from '../routes'
+import { ROUTES } from '@/routes'
 
 type NavItem = {
   path: string

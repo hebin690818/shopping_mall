@@ -2,7 +2,7 @@ import { useLayoutEffect } from "react";
 import { Layout } from "antd";
 import { Outlet, useLocation } from "react-router-dom";
 import BottomNavigation from "./BottomNavigation";
-import { ROUTES } from "../routes";
+import { ROUTES } from '@/routes';
 
 // 页面切换时滚动到顶部
 function ScrollToTop() {

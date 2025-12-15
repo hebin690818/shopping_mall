@@ -2,10 +2,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Typography, Spin, Empty } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
-import { ROUTES } from "../../routes";
-import { api } from "../../lib/api";
-import type { Product, MerchantDetail } from "../../lib/api";
-import { API_BASE_URL } from "../../lib/config";
+import { ROUTES } from "@/routes";
+import { api } from "@/lib/api";
+import type { Product, MerchantDetail } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
 
 const { Text } = Typography;

@@ -4,10 +4,10 @@ import { useTranslation } from "react-i18next";
 import { SearchOutlined } from "@ant-design/icons";
 import { useConnection, useConnect, useSignMessage } from "wagmi";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../routes";
-import { useAuth } from "../../hooks/useAuth";
-import { api } from "../../lib/api";
-import type { Category, Product } from "../../lib/api";
+import { ROUTES } from "@/routes";
+import { useAuth } from "@/hooks/useAuth";
+import { api } from "@/lib/api";
+import type { Category, Product } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";
 
 const { Text } = Typography;

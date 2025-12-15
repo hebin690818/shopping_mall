@@ -3,20 +3,20 @@ import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useConnection } from "wagmi";
 import { useState } from "react";
-import { ROUTES } from "../../routes";
+import { ROUTES } from "@/routes";
 import {
   useMarketContract,
   useMarketQuery,
-} from "../../hooks/useMarketContract";
-import { useTokenContract, useTokenQuery } from "../../hooks/useTokenContract";
-import { useGlobalLoading } from "../../contexts/LoadingProvider";
-import { MARKET_CONTRACT_ADDRESS } from "../../lib/config";
+} from "@/hooks/useMarketContract";
+import { useTokenContract, useTokenQuery } from "@/hooks/useTokenContract";
+import { useGlobalLoading } from "@/contexts/LoadingProvider";
+import { MARKET_CONTRACT_ADDRESS } from "@/lib/config";
 import {
   phoneToBigInt,
   needsApproval,
   parseTokenAmount,
   formatTokenAmount,
-} from "../../lib/contractUtils";
+} from "@/lib/contractUtils";
 import backSvg from "@/assets/back.svg";
 
 const { Title, Text } = Typography;

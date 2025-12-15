@@ -12,11 +12,11 @@ import {
   ExclamationCircleOutlined,
   DollarOutlined
 } from "@ant-design/icons";
-import { useMarketContract, useMarketQuery } from "../../hooks/useMarketContract";
-import { useGlobalLoading } from "../../contexts/LoadingProvider";
+import { useMarketContract, useMarketQuery } from "@/hooks/useMarketContract";
+import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { type Order } from "../orders";
-import { OrderStatus } from "../../lib/contractUtils";
-import { ROUTES } from "../../routes";
+import { OrderStatus } from "@/lib/contractUtils";
+import { ROUTES } from "@/routes";
 import product from "@/assets/product.png";
 import backSvg from "@/assets/back.svg";
 import { API_BASE_URL } from "@/lib/config";

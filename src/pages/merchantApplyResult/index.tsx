@@ -2,7 +2,7 @@ import { Button, Typography } from "antd";
 import { CheckCircleTwoTone, CloseCircleTwoTone } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
-import { ROUTES } from "../../routes";
+import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 
 const { Title } = Typography;

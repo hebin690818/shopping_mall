@@ -1,5 +1,5 @@
 import { useReadContract, usePublicClient, useWalletClient } from 'wagmi';
-import { rewardAbi, REWARD_CONTRACT_ADDRESS } from '../abi/reward';
+import { rewardAbi, REWARD_CONTRACT_ADDRESS } from '@/abi/reward';
 import { useConnection } from 'wagmi';
 import type { Address } from 'viem';
 import type { TransactionReceipt } from 'viem';

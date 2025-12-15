@@ -2,7 +2,7 @@ import { Button, Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ROUTES } from "../../routes";
+import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 import { api, type Product } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";

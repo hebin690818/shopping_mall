@@ -3,12 +3,12 @@ import { CopyOutlined } from "@ant-design/icons";
 import { useConnection } from "wagmi";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { ROUTES } from "../../routes";
-import { useGlobalLoading } from "../../contexts/LoadingProvider";
+import { ROUTES } from "@/routes";
+import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { useRef, useState, useEffect } from "react";
 import i18n from "@/i18n/config";
 import backSvg from "@/assets/back.svg";
-import { api, type MerchantDetail, type Address } from "../../lib/api";
+import { api, type MerchantDetail, type Address } from "@/lib/api";
 
 const { Title, Text } = Typography;
 

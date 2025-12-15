@@ -1,7 +1,7 @@
 import i18n from 'i18next'
 import { initReactI18next } from 'react-i18next'
-import enCommon from '../locales/en/common.json'
-import zhCommon from '../locales/zh/common.json'
+import enCommon from '@/locales/en/common.json'
+import zhCommon from '@/locales/zh/common.json'
 
 // 从 localStorage 读取保存的语言，如果没有则使用默认值
 const getStoredLanguage = (): string => {

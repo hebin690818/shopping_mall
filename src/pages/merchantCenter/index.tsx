@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button, Typography, Spin, message, Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ROUTES } from "../../routes";
+import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 import { api, type Product } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";

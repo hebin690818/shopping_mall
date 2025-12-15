@@ -3,7 +3,7 @@ import { Button, Typography, Input, message, Spin, Modal } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useConnection } from "wagmi";
-import { ROUTES } from "../../routes";
+import { ROUTES } from "@/routes";
 import {
   CheckCircleOutlined,
   ClockCircleOutlined,

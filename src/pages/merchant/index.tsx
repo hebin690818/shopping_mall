@@ -3,10 +3,10 @@ import { Button, Typography, Spin, Empty } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useConnection } from "wagmi";
-import { ROUTES } from "../../routes";
-import { useMarketQuery } from "../../hooks/useMarketContract";
-import { api } from "../../lib/api";
-import type { MerchantListItem } from "../../lib/api";
+import { ROUTES } from "@/routes";
+import { useMarketQuery } from "@/hooks/useMarketContract";
+import { api } from "@/lib/api";
+import type { MerchantListItem } from "@/lib/api";
 import product from "@/assets/product.png";
 
 const { Title, Text, Paragraph } = Typography;

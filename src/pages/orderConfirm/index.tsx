@@ -5,15 +5,15 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { useConnection } from "wagmi";
 import { maxUint256 } from "viem";
-import { ROUTES } from "../../routes";
-import { useGlobalLoading } from "../../contexts/LoadingProvider";
-import { useMarketContract } from "../../hooks/useMarketContract";
-import { useTokenContract, useTokenQuery } from "../../hooks/useTokenContract";
-import { MARKET_CONTRACT_ADDRESS, API_BASE_URL } from "../../lib/config";
+import { ROUTES } from "@/routes";
+import { useGlobalLoading } from "@/contexts/LoadingProvider";
+import { useMarketContract } from "@/hooks/useMarketContract";
+import { useTokenContract, useTokenQuery } from "@/hooks/useTokenContract";
+import { MARKET_CONTRACT_ADDRESS, API_BASE_URL } from "@/lib/config";
 import {
   needsApproval,
   parseTokenAmount,
-} from "../../lib/contractUtils";
+} from "@/lib/contractUtils";
 import backSvg from "@/assets/back.svg";
 import { api, type Product, type Address } from "@/lib/api";
 

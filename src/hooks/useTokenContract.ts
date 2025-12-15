@@ -1,5 +1,5 @@
 import { useReadContract, usePublicClient, useWalletClient } from 'wagmi';
-import { tokenAbi, TOKEN_CONTRACT_ADDRESS } from '../abi/token';
+import { tokenAbi, TOKEN_CONTRACT_ADDRESS } from '@/abi/token';
 import { useConnection } from 'wagmi';
 import { parseUnits } from 'viem';
 import type { Address } from 'viem';

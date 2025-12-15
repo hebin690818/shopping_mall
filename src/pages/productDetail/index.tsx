@@ -2,9 +2,9 @@ import { Button, Typography } from "antd";
 import { useConnection, useConnect } from "wagmi";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
-import { ROUTES } from "../../routes";
-import type { Product } from "../../lib/api";
-import { API_BASE_URL } from "../../lib/config";
+import { ROUTES } from "@/routes";
+import type { Product } from "@/lib/api";
+import { API_BASE_URL } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
 
 const { Title, Paragraph, Text } = Typography;

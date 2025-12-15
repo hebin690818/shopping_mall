@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
-import GlobalLoading from "../components/GlobalLoading";
+import GlobalLoading from '@/components/GlobalLoading';
 
 type LoadingContextValue = {
   isLoading: boolean;

@@ -2,9 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Typography } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
-import { ROUTES } from "../../routes";
-import { api } from "../../lib/api";
-import type { Product, Category } from "../../lib/api";
+import { ROUTES } from "@/routes";
+import { api } from "@/lib/api";
+import type { Product, Category } from "@/lib/api";
 import { API_BASE_URL } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
 

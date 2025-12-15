@@ -1,22 +1,22 @@
 import { createBrowserRouter } from "react-router-dom";
-import HomePage from "../pages/home";
-import OrdersPage from "../pages/orders";
-import OrdersListPage from "../pages/ordersList";
-import ProfilePage from "../pages/profile";
-import ProductDetailPage from "../pages/productDetail";
-import OrderConfirmPage from "../pages/orderConfirm";
-import OrderDetailPage from "../pages/orderDetail";
-import PaymentSuccessPage from "../pages/paymentSuccess";
-import MerchantPage from "../pages/merchant";
-import MerchantApplyPage from "../pages/merchantApply";
-import MerchantApplyResultPage from "../pages/merchantApplyResult";
-import MerchantCenterPage from "../pages/merchantCenter";
-import MerchantProductEditPage from "../pages/merchantProductEdit";
-import MerchantStorePage from "../pages/merchantStore";
-import SettingsPage from "../pages/settings";
-import AddressEditPage from "../pages/addressEdit";
-import CategoryProductsPage from "../pages/categoryProducts";
-import AppLayout from "../components/Layout";
+import HomePage from "@/pages/home";
+import OrdersPage from "@/pages/orders";
+import OrdersListPage from "@/pages/ordersList";
+import ProfilePage from "@/pages/profile";
+import ProductDetailPage from "@/pages/productDetail";
+import OrderConfirmPage from "@/pages/orderConfirm";
+import OrderDetailPage from "@/pages/orderDetail";
+import PaymentSuccessPage from "@/pages/paymentSuccess";
+import MerchantPage from "@/pages/merchant";
+import MerchantApplyPage from "@/pages/merchantApply";
+import MerchantApplyResultPage from "@/pages/merchantApplyResult";
+import MerchantCenterPage from "@/pages/merchantCenter";
+import MerchantProductEditPage from "@/pages/merchantProductEdit";
+import MerchantStorePage from "@/pages/merchantStore";
+import SettingsPage from "@/pages/settings";
+import AddressEditPage from "@/pages/addressEdit";
+import CategoryProductsPage from "@/pages/categoryProducts";
+import AppLayout from "@/components/Layout";
 
 // 路由路径常量
 export const ROUTES = {
