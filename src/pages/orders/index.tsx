@@ -16,7 +16,6 @@ import { useMarketContract } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { api, type OrderAPI, type OrderStatusAPI } from "@/lib/api";
 import product from "@/assets/product.png";
-import bgSvg from "@/assets/bg.svg";
 
 const { Text, Title } = Typography;
 
@@ -614,7 +613,6 @@ export default function OrdersPage() {
     <div
       className="min-h-screen pb-20"
       style={{
-        backgroundImage: `url(${bgSvg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

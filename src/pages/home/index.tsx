@@ -9,7 +9,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type { Category, Product } from "@/lib/api";
 import { API_BASE_URL_IMAGE } from "@/lib/config";
-import bgSvg from "@/assets/bg.svg";
 
 const { Text } = Typography;
 
@@ -334,7 +333,9 @@ export default function HomePage({}: HomePageProps) {
     <div
       className="min-h-screen pb-20 overflow-x-hidden"
       style={{
-        backgroundImage: `url(${bgSvg})`,
+        backgroundImage: `url(${
+          import.meta.env.PROD ? "shop/bg.svg" : "/bg.svg"
+        })`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -477,7 +478,10 @@ export default function HomePage({}: HomePageProps) {
                     className="flex-shrink-0 text-center cursor-pointer"
                     onClick={() =>
                       navigate(
-                        ROUTES.CATEGORY_PRODUCTS.replace(":categoryId", category.id)
+                        ROUTES.CATEGORY_PRODUCTS.replace(
+                          ":categoryId",
+                          category.id
+                        )
                       )
                     }
                   >

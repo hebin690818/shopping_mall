@@ -15,7 +15,6 @@ import {
   parseTokenAmount,
 } from "@/lib/contractUtils";
 import backSvg from "@/assets/back.svg";
-import bgSvg from "@/assets/bg.svg";
 import { api, type Product, type Address } from "@/lib/api";
 
 const { Title, Text } = Typography;
@@ -223,7 +222,9 @@ export default function OrderConfirmPage() {
     <div
       className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-white pb-28"
       style={{
-        backgroundImage: `url(${bgSvg})`,
+        backgroundImage: `url(${
+          import.meta.env.PROD ? "shop/bg.svg" : "/bg.svg"
+        })`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

@@ -7,7 +7,6 @@ import { api } from "@/lib/api";
 import type { Product, MerchantDetail } from "@/lib/api";
 import { API_BASE_URL_IMAGE } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
-import bgSvg from "@/assets/bg.svg";
 
 const { Text } = Typography;
 
@@ -182,7 +181,9 @@ export default function MerchantStorePage() {
     <div
       className="min-h-screen pb-24"
       style={{
-        backgroundImage: `url(${bgSvg})`,
+        backgroundImage: `url(${
+          import.meta.env.PROD ? "/shop/bg.svg" : "/bg.svg"
+        })`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

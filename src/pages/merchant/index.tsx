@@ -8,7 +8,6 @@ import { useMarketQuery } from "@/hooks/useMarketContract";
 import { api } from "@/lib/api";
 import type { MerchantListItem } from "@/lib/api";
 import product from "@/assets/product.png";
-import bgSvg from "@/assets/bg.svg";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -130,7 +129,9 @@ export default function MerchantPage() {
     <div
       className="min-h-screen pb-24"
       style={{
-        backgroundImage: `url(${bgSvg})`,
+        backgroundImage: `url(${
+          import.meta.env.PROD ? "shop/bg.svg" : "/bg.svg"
+        })`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -256,9 +257,7 @@ export default function MerchantPage() {
               </div>
             ) : merchants.length === 0 ? (
               <div className="bg-white rounded-lg p-8">
-                <Empty
-                  description={t("merchantPage.noMerchants")}
-                />
+                <Empty description={t("merchantPage.noMerchants")} />
               </div>
             ) : (
               <>
@@ -306,7 +305,9 @@ export default function MerchantPage() {
                 {hasMore && (
                   <div ref={loadMoreRef} className="py-4 text-center">
                     {loadingMerchants && (
-                      <Text className="text-slate-500">{t("loading.loading")}</Text>
+                      <Text className="text-slate-500">
+                        {t("loading.loading")}
+                      </Text>
                     )}
                   </div>
                 )}

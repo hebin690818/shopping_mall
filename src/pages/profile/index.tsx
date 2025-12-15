@@ -4,16 +4,12 @@ import { useTranslation } from "react-i18next";
 import { useConnection } from "wagmi";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/routes";
-import {
-  useRewardContract,
-  useRewardQuery,
-} from "@/hooks/useRewardContract";
+import { useRewardContract, useRewardQuery } from "@/hooks/useRewardContract";
 import { useTokenQuery } from "@/hooks/useTokenContract";
 import { useMarketQuery } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { formatTokenAmount } from "@/lib/contractUtils";
 import { CopyOutlined, RightOutlined } from "@ant-design/icons";
-import bgSvg from "@/assets/bg.svg";
 
 const { Text, Title } = Typography;
 
@@ -133,7 +129,9 @@ export default function ProfilePage() {
     <div
       className="min-h-screen pb-20"
       style={{
-        backgroundImage: `url(${bgSvg})`,
+        backgroundImage: `url(${
+          import.meta.env.PROD ? "shop/bg.svg" : "/bg.svg"
+        })`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
