@@ -334,7 +334,7 @@ export default function HomePage({}: HomePageProps) {
       className="min-h-screen pb-20 overflow-x-hidden"
       style={{
         backgroundImage: `url(${
-          import.meta.env.PROD ? "shop/bg.svg" : "/bg.svg"
+          import.meta.env.PROD ? "/shop/bg.svg" : "/bg.svg"
         })`,
         backgroundSize: "cover",
         backgroundPosition: "center",

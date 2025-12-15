@@ -223,7 +223,7 @@ export default function OrderConfirmPage() {
       className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-white pb-28"
       style={{
         backgroundImage: `url(${
-          import.meta.env.PROD ? "shop/bg.svg" : "/bg.svg"
+          import.meta.env.PROD ? "/shop/bg.svg" : "/bg.svg"
         })`,
         backgroundSize: "cover",
         backgroundPosition: "center",

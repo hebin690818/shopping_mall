@@ -182,7 +182,7 @@ export default function MerchantStorePage() {
       className="min-h-screen pb-24"
       style={{
         backgroundImage: `url(${
-          import.meta.env.PROD ? "/shop/bg.svg" : "/bg.svg"
+          import.meta.env.PROD ? "//shop/bg.svg" : "/bg.svg"
         })`,
         backgroundSize: "cover",
         backgroundPosition: "center",
