@@ -6,7 +6,7 @@ import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 import { api, type Product } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Title, Text } = Typography;
 
@@ -296,7 +296,7 @@ export default function MerchantCenterPage() {
                 >
                   <div className="flex gap-3">
                     <img
-                      src={`${API_BASE_URL}${item.image_url}`}
+                      src={`${API_BASE_URL_IMAGE}${item.image_url}`}
                       alt={item.name}
                       className="w-20 h-20 rounded-2xl object-cover"
                     />

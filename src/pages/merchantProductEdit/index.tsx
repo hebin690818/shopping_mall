@@ -16,7 +16,7 @@ import { ROUTES } from "@/routes";
 import { api, type Category, type Product } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
 import type { UploadFile } from "antd/es/upload/interface";
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Title, Text } = Typography;
 
@@ -113,7 +113,7 @@ export default function MerchantProductEditPage() {
               status: "done",
               url: productImageUrl.startsWith("http")
                 ? productImageUrl
-                : `${API_BASE_URL}${productImageUrl}`,
+                : `${API_BASE_URL_IMAGE}${productImageUrl}`,
             },
           ]);
         }
@@ -354,7 +354,7 @@ export default function MerchantProductEditPage() {
                             src={
                               imageUrl.startsWith("http")
                                 ? imageUrl
-                                : `${API_BASE_URL}${imageUrl}`
+                                : `${API_BASE_URL_IMAGE}${imageUrl}`
                             }
                             alt={t("merchantEdit.images")}
                             className="w-full h-full object-cover"

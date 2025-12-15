@@ -399,6 +399,11 @@
     "title": "商家店铺",
     "products": "商品列表",
     "noProducts": "暂无商品"
+  },
+  "notFound": {
+    "title": "页面不存在",
+    "subtitle": "抱歉，您访问的页面不存在或已被移动。",
+    "backHome": "返回首页"
   }
 }
 

@@ -13,6 +13,7 @@ import { useMarketQuery } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { formatTokenAmount } from "@/lib/contractUtils";
 import { CopyOutlined, RightOutlined } from "@ant-design/icons";
+import bgSvg from "@/assets/bg.svg";
 
 const { Text, Title } = Typography;
 
@@ -132,7 +133,7 @@ export default function ProfilePage() {
     <div
       className="min-h-screen pb-20"
       style={{
-        backgroundImage: "url(/bg.svg)",
+        backgroundImage: `url(${bgSvg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

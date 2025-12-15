@@ -399,6 +399,11 @@
     "title": "Merchant Store",
     "products": "Products",
     "noProducts": "No products available"
+  },
+  "notFound": {
+    "title": "Page Not Found",
+    "subtitle": "Sorry, the page you visited does not exist or has been moved.",
+    "backHome": "Back to Home"
   }
 }
 

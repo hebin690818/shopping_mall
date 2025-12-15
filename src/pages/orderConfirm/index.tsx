@@ -9,12 +9,13 @@ import { ROUTES } from "@/routes";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { useMarketContract } from "@/hooks/useMarketContract";
 import { useTokenContract, useTokenQuery } from "@/hooks/useTokenContract";
-import { MARKET_CONTRACT_ADDRESS, API_BASE_URL } from "@/lib/config";
+import { MARKET_CONTRACT_ADDRESS, API_BASE_URL_IMAGE } from "@/lib/config";
 import {
   needsApproval,
   parseTokenAmount,
 } from "@/lib/contractUtils";
 import backSvg from "@/assets/back.svg";
+import bgSvg from "@/assets/bg.svg";
 import { api, type Product, type Address } from "@/lib/api";
 
 const { Title, Text } = Typography;
@@ -91,7 +92,7 @@ export default function OrderConfirmPage() {
 
   // 处理图片 URL，优先使用 image_url，如果没有则使用 image
   const productImage = displayProduct.image_url
-    ? `${API_BASE_URL}${displayProduct.image_url}`
+    ? `${API_BASE_URL_IMAGE}${displayProduct.image_url}`
     : displayProduct.image || "";
 
   const unitPrice = useMemo(() => {
@@ -222,7 +223,7 @@ export default function OrderConfirmPage() {
     <div
       className="min-h-screen bg-gradient-to-b from-slate-100 via-white to-white pb-28"
       style={{
-        backgroundImage: "url(/bg.svg)",
+        backgroundImage: `url(${bgSvg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

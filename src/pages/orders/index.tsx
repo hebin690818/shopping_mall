@@ -16,10 +16,11 @@ import { useMarketContract } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { api, type OrderAPI, type OrderStatusAPI } from "@/lib/api";
 import product from "@/assets/product.png";
+import bgSvg from "@/assets/bg.svg";
 
 const { Text, Title } = Typography;
 
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 export type OrderStatus = "pending" | "delivering" | "completed";
 
@@ -613,7 +614,7 @@ export default function OrdersPage() {
     <div
       className="min-h-screen pb-20"
       style={{
-        backgroundImage: "url(/bg.svg)",
+        backgroundImage: `url(${bgSvg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -701,7 +702,7 @@ export default function OrdersPage() {
                     {/* Product Info */}
                     <div className="flex gap-3">
                       <img
-                        src={`${API_BASE_URL}${order.product_image_url}`}
+                        src={`${API_BASE_URL_IMAGE}${order.product_image_url}`}
                         alt={order.product_name || order.name}
                         className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                       />

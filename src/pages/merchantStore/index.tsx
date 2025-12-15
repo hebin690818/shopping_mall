@@ -5,8 +5,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { api } from "@/lib/api";
 import type { Product, MerchantDetail } from "@/lib/api";
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL_IMAGE } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
+import bgSvg from "@/assets/bg.svg";
 
 const { Text } = Typography;
 
@@ -181,7 +182,7 @@ export default function MerchantStorePage() {
     <div
       className="min-h-screen pb-24"
       style={{
-        backgroundImage: "url(/bg.svg)",
+        backgroundImage: `url(${bgSvg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -268,7 +269,7 @@ export default function MerchantStorePage() {
                   >
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={`${API_BASE_URL}${
+                        src={`${API_BASE_URL_IMAGE}${
                           product.image_url || product.image
                         }`}
                         alt={product.name}

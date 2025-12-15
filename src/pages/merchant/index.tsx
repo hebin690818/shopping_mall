@@ -8,6 +8,7 @@ import { useMarketQuery } from "@/hooks/useMarketContract";
 import { api } from "@/lib/api";
 import type { MerchantListItem } from "@/lib/api";
 import product from "@/assets/product.png";
+import bgSvg from "@/assets/bg.svg";
 
 const { Title, Text, Paragraph } = Typography;
 
@@ -129,7 +130,7 @@ export default function MerchantPage() {
     <div
       className="min-h-screen pb-24"
       style={{
-        backgroundImage: "url(/bg.svg)",
+        backgroundImage: `url(${bgSvg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",

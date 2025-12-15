@@ -16,6 +16,7 @@ import MerchantStorePage from "@/pages/merchantStore";
 import SettingsPage from "@/pages/settings";
 import AddressEditPage from "@/pages/addressEdit";
 import CategoryProductsPage from "@/pages/categoryProducts";
+import NotFoundPage from "@/pages/notFound";
 import AppLayout from "@/components/Layout";
 
 // 路由路径常量
@@ -37,82 +38,99 @@ export const ROUTES = {
   SETTINGS: "/settings",
   ADDRESS_EDIT: "/address/edit",
   CATEGORY_PRODUCTS: "/category/:categoryId/products",
+  NOT_FOUND: "*",
 } as const;
 
-export const router = createBrowserRouter([
+// 根据环境设置 basename：
+// - 开发环境：挂在根路径，使用 '/'
+// - 生产环境：部署在 https://dream.dreamflycn.com/shop/ 下，使用 '/shop'
+const BASENAME = import.meta.env.PROD ? "/shop" : "/";
+
+export const router = createBrowserRouter(
+  [
+    {
+      path: ROUTES.HOME,
+      element: <AppLayout />,
+      errorElement: <NotFoundPage />,
+      children: [
+        {
+          index: true,
+          element: <HomePage />,
+        },
+        {
+          path: ROUTES.PRODUCT_DETAIL,
+          element: <ProductDetailPage />,
+        },
+        {
+          path: ROUTES.ORDER_CONFIRM,
+          element: <OrderConfirmPage />,
+        },
+        {
+          path: ROUTES.PAYMENT_SUCCESS,
+          element: <PaymentSuccessPage />,
+        },
+        {
+          path: ROUTES.ORDERS,
+          element: <OrdersPage />,
+        },
+        {
+          path: ROUTES.ORDER_DETAIL,
+          element: <OrderDetailPage />,
+        },
+        {
+          path: ROUTES.ORDERS_LIST,
+          element: <OrdersListPage />,
+        },
+        {
+          path: ROUTES.PROFILE,
+          element: <ProfilePage />,
+        },
+        {
+          path: ROUTES.MERCHANT,
+          element: <MerchantPage />,
+        },
+        {
+          path: ROUTES.MERCHANT_APPLY,
+          element: <MerchantApplyPage />,
+        },
+        {
+          path: ROUTES.MERCHANT_APPLY_RESULT,
+          element: <MerchantApplyResultPage />,
+        },
+        {
+          path: ROUTES.MERCHANT_CENTER,
+          element: <MerchantCenterPage />,
+        },
+        {
+          path: ROUTES.MERCHANT_PRODUCT_EDIT,
+          element: <MerchantProductEditPage />,
+        },
+        {
+          path: ROUTES.MERCHANT_STORE,
+          element: <MerchantStorePage />,
+        },
+        {
+          path: ROUTES.SETTINGS,
+          element: <SettingsPage />,
+        },
+        {
+          path: ROUTES.ADDRESS_EDIT,
+          element: <AddressEditPage />,
+        },
+        {
+          path: ROUTES.CATEGORY_PRODUCTS,
+          element: <CategoryProductsPage />,
+        },
+        // 兜底 404 路由，避免 React Router 抛出默认错误页
+        {
+          path: ROUTES.NOT_FOUND,
+          element: <NotFoundPage />,
+        },
+      ],
+    },
+  ],
   {
-    path: ROUTES.HOME,
-    element: <AppLayout />,
-    children: [
-      {
-        index: true,
-        element: <HomePage />,
-      },
-      {
-        path: ROUTES.PRODUCT_DETAIL,
-        element: <ProductDetailPage />,
-      },
-      {
-        path: ROUTES.ORDER_CONFIRM,
-        element: <OrderConfirmPage />,
-      },
-      {
-        path: ROUTES.PAYMENT_SUCCESS,
-        element: <PaymentSuccessPage />,
-      },
-      {
-        path: ROUTES.ORDERS,
-        element: <OrdersPage />,
-      },
-      {
-        path: ROUTES.ORDER_DETAIL,
-        element: <OrderDetailPage />,
-      },
-      {
-        path: ROUTES.ORDERS_LIST,
-        element: <OrdersListPage />,
-      },
-      {
-        path: ROUTES.PROFILE,
-        element: <ProfilePage />,
-      },
-      {
-        path: ROUTES.MERCHANT,
-        element: <MerchantPage />,
-      },
-      {
-        path: ROUTES.MERCHANT_APPLY,
-        element: <MerchantApplyPage />,
-      },
-      {
-        path: ROUTES.MERCHANT_APPLY_RESULT,
-        element: <MerchantApplyResultPage />,
-      },
-      {
-        path: ROUTES.MERCHANT_CENTER,
-        element: <MerchantCenterPage />,
-      },
-      {
-        path: ROUTES.MERCHANT_PRODUCT_EDIT,
-        element: <MerchantProductEditPage />,
-      },
-      {
-        path: ROUTES.MERCHANT_STORE,
-        element: <MerchantStorePage />,
-      },
-      {
-        path: ROUTES.SETTINGS,
-        element: <SettingsPage />,
-      },
-      {
-        path: ROUTES.ADDRESS_EDIT,
-        element: <AddressEditPage />,
-      },
-      {
-        path: ROUTES.CATEGORY_PRODUCTS,
-        element: <CategoryProductsPage />,
-      },
-    ],
-  },
-]);
+    basename: BASENAME,
+  }
+);
 

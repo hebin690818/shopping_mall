@@ -5,8 +5,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { api } from "@/lib/api";
 import type { Product, Category } from "@/lib/api";
-import { API_BASE_URL } from "@/lib/config";
+import { API_BASE_URL_IMAGE } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
+import bgSvg from "@/assets/bg.svg";
 
 const { Text, Title } = Typography;
 
@@ -155,7 +156,7 @@ export default function CategoryProductsPage() {
     <div
       className="min-h-screen pb-20 overflow-x-hidden"
       style={{
-        backgroundImage: "url(/bg.svg)",
+        backgroundImage: `url(${bgSvg})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -206,7 +207,7 @@ export default function CategoryProductsPage() {
                   <div>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={`${API_BASE_URL}${product.image_url || product.image}`}
+                        src={`${API_BASE_URL_IMAGE}${product.image_url || product.image}`}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
