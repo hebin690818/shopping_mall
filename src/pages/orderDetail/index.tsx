@@ -19,7 +19,6 @@ import { OrderStatus } from "@/lib/contractUtils";
 import { ROUTES } from "@/routes";
 import product from "@/assets/product.png";
 import backSvg from "@/assets/back.svg";
-import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Text, Title } = Typography;
 
@@ -456,7 +455,7 @@ export default function OrderDetailPage() {
             <div className="flex gap-3 pt-2">
               <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                 <img
-                  src={`${API_BASE_URL_IMAGE}${order.product_image_url}`}
+                  src={`${order.product_image_url}`}
                   alt={order.product_name || order.name}
                   className="w-full h-full object-cover"
                 />

@@ -18,7 +18,6 @@ import { useMarketContract } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { api } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
-import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Text, Title } = Typography;
 
@@ -511,7 +510,7 @@ export default function OrdersListPage() {
                       {/* Product Info */}
                       <div className="flex gap-3">
                         <img
-                          src={`${API_BASE_URL_IMAGE}${order.product_image_url}`}
+                          src={`${order.product_image_url}`}
                           alt={order.product_name || order.name}
                           className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                         />

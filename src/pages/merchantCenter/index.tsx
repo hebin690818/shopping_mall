@@ -6,7 +6,6 @@ import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 import { api, type Product } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
-import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Title, Text } = Typography;
 
@@ -43,7 +42,7 @@ export default function MerchantCenterPage() {
     // status: 'published' 为上架，否则为下架
     const apiStatus = (product as any).status;
     const isPublished = apiStatus === "published";
-    
+
     return {
       id: String(product.id),
       name: product.name,
@@ -124,7 +123,7 @@ export default function MerchantCenterPage() {
           }
 
           const originalProduct = currentProduct.originalProduct;
-          
+
           // 调用API更新商品状态
           await api.updateProduct({
             id: productId,
@@ -132,18 +131,17 @@ export default function MerchantCenterPage() {
             description: (originalProduct as any).description || "",
             image_url: originalProduct.image_url || "",
             name: originalProduct.name,
-            price: typeof originalProduct.price === "string" 
-              ? parseFloat(originalProduct.price) || 0 
-              : (originalProduct.price as number) || 0,
+            price:
+              typeof originalProduct.price === "string"
+                ? parseFloat(originalProduct.price) || 0
+                : (originalProduct.price as number) || 0,
             status: newApiStatus,
           });
 
           // 重新获取商品列表数据
           await loadProducts(true);
 
-          message.success(
-            newStatus === "on" ? "商品已上架" : "商品已下架"
-          );
+          message.success(newStatus === "on" ? "商品已上架" : "商品已下架");
         } catch (error: any) {
           console.error("更新商品状态失败:", error);
           message.error(error.message || "更新商品状态失败");
@@ -296,7 +294,7 @@ export default function MerchantCenterPage() {
                 >
                   <div className="flex gap-3">
                     <img
-                      src={`${API_BASE_URL_IMAGE}${item.image_url}`}
+                      src={`${item.image_url}`}
                       alt={item.name}
                       className="w-20 h-20 rounded-2xl object-cover"
                     />

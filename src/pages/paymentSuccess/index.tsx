@@ -5,7 +5,6 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 import { api, type Product } from "@/lib/api";
-import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Title, Text } = Typography;
 
@@ -196,7 +195,7 @@ export default function PaymentSuccessPage({
                     <img
                       src={
                         (item as any).image_url
-                          ? `${API_BASE_URL_IMAGE}${(item as any).image_url}`
+                          ? `${(item as any).image_url}`
                           : item.image || ""
                       }
                       alt={item.name}

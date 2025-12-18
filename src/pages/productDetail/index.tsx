@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import type { Product } from "@/lib/api";
-import { API_BASE_URL_IMAGE } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
 
 const { Title, Paragraph, Text } = Typography;
@@ -30,7 +29,7 @@ export default function ProductDetailPage() {
 
   // 处理图片 URL，优先使用 image_url，如果没有则使用 image
   const productImage = displayProduct.image_url
-    ? `${API_BASE_URL_IMAGE}${displayProduct.image_url}`
+    ? `${displayProduct.image_url}`
     : displayProduct.image || "";
   const actionLabel = isConnected
     ? t("productDetail.buyNow")

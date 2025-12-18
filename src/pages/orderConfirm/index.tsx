@@ -9,7 +9,7 @@ import { ROUTES } from "@/routes";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { useMarketContract } from "@/hooks/useMarketContract";
 import { useTokenContract, useTokenQuery } from "@/hooks/useTokenContract";
-import { MARKET_CONTRACT_ADDRESS, API_BASE_URL_IMAGE } from "@/lib/config";
+import { MARKET_CONTRACT_ADDRESS } from "@/lib/config";
 import {
   needsApproval,
   parseTokenAmount,
@@ -91,7 +91,7 @@ export default function OrderConfirmPage() {
 
   // 处理图片 URL，优先使用 image_url，如果没有则使用 image
   const productImage = displayProduct.image_url
-    ? `${API_BASE_URL_IMAGE}${displayProduct.image_url}`
+    ? `${displayProduct.image_url}`
     : displayProduct.image || "";
 
   const unitPrice = useMemo(() => {

@@ -291,7 +291,12 @@ export default function MerchantPage() {
                             ROUTES.MERCHANT_STORE.replace(
                               ":merchantId",
                               String(item.id)
-                            )
+                            ),
+                            {
+                              state: {
+                                merchantName: item.name,
+                              },
+                            }
                           );
                         }}
                       >

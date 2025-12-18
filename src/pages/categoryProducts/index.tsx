@@ -5,7 +5,6 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { api } from "@/lib/api";
 import type { Product, Category } from "@/lib/api";
-import { API_BASE_URL_IMAGE } from "@/lib/config";
 import backSvg from "@/assets/back.svg";
 
 const { Text, Title } = Typography;
@@ -208,9 +207,7 @@ export default function CategoryProductsPage() {
                   <div>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={`${API_BASE_URL_IMAGE}${
-                          product.image_url || product.image
-                        }`}
+                        src={`${product.image_url || product.image}`}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />

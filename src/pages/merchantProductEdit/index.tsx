@@ -141,13 +141,13 @@ export default function MerchantProductEditPage() {
     setUploading(true);
     try {
       const result = await api.uploadImage(file);
-      setImageUrl(result.url);
+      setImageUrl(`${API_BASE_URL_IMAGE}${result.url}`);
       setFileList([
         {
           uid: "-1",
           name: result.filename,
           status: "done",
-          url: result.url,
+          url: `${API_BASE_URL_IMAGE}${result.url}`,
         },
       ]);
       message.success(t("merchantEdit.imageUploadSuccess"));
@@ -211,7 +211,7 @@ export default function MerchantProductEditPage() {
         // 保持商品原有状态，如果原来没有状态则默认为 published（上架）
         const currentStatus = (product as any)?.status;
         const statusToUpdate = currentStatus || "published";
-        
+
         await api.updateProduct({
           id: productId,
           category_id: values.category_id,
@@ -309,7 +309,10 @@ export default function MerchantProductEditPage() {
                   }
                   name="category_id"
                   rules={[
-                    { required: true, message: t("merchantEdit.categoryRequired") },
+                    {
+                      required: true,
+                      message: t("merchantEdit.categoryRequired"),
+                    },
                   ]}
                 >
                   <Select

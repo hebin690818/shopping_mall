@@ -8,7 +8,6 @@ import { ROUTES } from "@/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type { Category, Product } from "@/lib/api";
-import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Text } = Typography;
 
@@ -487,7 +486,7 @@ export default function HomePage({}: HomePageProps) {
                   >
                     <div className="w-20 h-20 rounded-lg bg-slate-200 mb-2 overflow-hidden hover:opacity-80 transition-opacity">
                       <img
-                        src={`${API_BASE_URL_IMAGE}${category.image_url}`}
+                        src={`${category.image_url}`}
                         alt={category.name}
                         className="w-full h-full object-cover"
                       />
@@ -538,7 +537,7 @@ export default function HomePage({}: HomePageProps) {
                   <div>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={`${API_BASE_URL_IMAGE}${product.image_url}`}
+                        src={`${product.image_url}`}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
