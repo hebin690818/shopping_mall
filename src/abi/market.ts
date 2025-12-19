@@ -1,6 +1,6 @@
 // Market合约地址
 export const MARKET_CONTRACT_ADDRESS =
-  "0xb5cf772dc407350ec1f3a54896db44bd91dba918" as const;
+  "0xb3fd90c92bb2e954da0edbd8be19c064b2c663f9" as const;
 
 export const marketAbi = [
   {

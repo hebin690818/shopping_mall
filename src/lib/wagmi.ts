@@ -3,31 +3,32 @@ import { mainnet, sepolia } from 'wagmi/chains'
 import { coinbaseWallet, injected, walletConnect } from 'wagmi/connectors'
 import { defineChain } from 'viem'
 
-// BSC测试网配置
-export const bscTestnet = defineChain({
-  id: 97,
-  name: 'BSC Testnet',
+// BSC主网配置
+export const bscMainnet = defineChain({
+  id: 56,
+  name: 'BNB Smart Chain Mainnet',
   nativeCurrency: {
     decimals: 18,
-    name: 'tBNB',
-    symbol: 'tBNB',
+    name: 'BNB',
+    symbol: 'BNB',
   },
   rpcUrls: {
     default: {
       http: [
-        'https://data-seed-prebsc-1-s1.binance.org:8545',
-        'https://data-seed-prebsc-2-s1.binance.org:8545',
-        'https://data-seed-prebsc-1-s2.binance.org:8545',
+        'https://bsc-dataseed1.binance.org',
+        'https://bsc-dataseed2.binance.org',
+        'https://bsc-dataseed1.defibit.io',
+        'https://bsc-dataseed1.nodereal.io',
       ],
     },
   },
   blockExplorers: {
     default: {
       name: 'BscScan',
-      url: 'https://testnet.bscscan.com',
+      url: 'https://bscscan.com',
     },
   },
-  testnet: true,
+  testnet: false,
 })
 
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
@@ -47,9 +48,9 @@ if (projectId) {
 }
 
 export const wagmiConfig = createConfig({
-  chains: [bscTestnet, mainnet, sepolia],
+  chains: [bscMainnet, mainnet, sepolia],
   transports: {
-    [bscTestnet.id]: http(),
+    [bscMainnet.id]: http(),
     [mainnet.id]: http(),
     [sepolia.id]: http(),
   },
