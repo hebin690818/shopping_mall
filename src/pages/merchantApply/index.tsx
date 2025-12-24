@@ -4,10 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useConnection } from "wagmi";
 import { useState } from "react";
 import { ROUTES } from "@/routes";
-import {
-  useMarketContract,
-  useMarketQuery,
-} from "@/hooks/useMarketContract";
+import { useMarketContract, useMarketQuery } from "@/hooks/useMarketContract";
 import { useTokenContract, useTokenQuery } from "@/hooks/useTokenContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { MARKET_CONTRACT_ADDRESS } from "@/lib/config";
@@ -68,8 +65,6 @@ export default function MerchantApplyPage() {
           ? merchantFee
           : parseTokenAmount("100"); // 默认100U
 
-      // 添加10%缓冲，避免精度问题
-      const approveAmount = (feeAmount * 110n) / 100n;
       const needsApprove = needsApproval(
         allowance && typeof allowance === "bigint" ? allowance : undefined,
         feeAmount
@@ -78,11 +73,14 @@ export default function MerchantApplyPage() {
       if (needsApprove) {
         showLoading(t("loading.approving"));
         // 使用格式化的金额，确保精度
-        const approveAmountStr = formatTokenAmount(approveAmount, 18, 18);
-        
+        const approveAmountStr = formatTokenAmount(feeAmount, 18, 18);
+
         // 调用授权，等待交易确认
-        const approveReceipt = await approve(MARKET_CONTRACT_ADDRESS, approveAmountStr);
-        
+        const approveReceipt = await approve(
+          MARKET_CONTRACT_ADDRESS,
+          approveAmountStr
+        );
+
         // 检查授权交易状态
         if (approveReceipt.status === "success") {
           message.success(t("messages.approveSuccess"));
@@ -100,10 +98,12 @@ export default function MerchantApplyPage() {
 
       // 4. 检查交易状态
       if (receipt.status === "success") {
-        hideLoading();
-        setIsSubmitting(false);
-        message.success(t("messages.registerSuccess"));
-        navigate(ROUTES.MERCHANT_APPLY_RESULT.replace(":status", "success"));
+        setTimeout(() => {
+          hideLoading();
+          setIsSubmitting(false);
+          message.success(t("messages.registerSuccess"));
+          navigate(ROUTES.MERCHANT_APPLY_RESULT.replace(":status", "success"));
+        }, 1500);
       } else {
         throw new Error(t("messages.transactionFailed"));
       }
@@ -182,22 +182,29 @@ export default function MerchantApplyPage() {
 
               <Form.Item
                 label={
-                <span className="text-sm text-slate-900">
-                  {t("merchantApply.phoneNumber")} <span className="text-red-500">*</span>
-                </span>
-              }
-              name="phoneNumber"
-              rules={[
-                { required: true, message: t("merchantApply.phoneNumberRequired") },
-                { pattern: /^1[3-9]\d{9}$/, message: t("merchantApply.phoneNumberInvalid") },
-              ]}
-            >
-              <Input
-                size="large"
-                placeholder={t("merchantApply.phoneNumberPlaceholder")}
-                className="!border-0 !border-b !rounded-none !px-0 !pb-3"
-                maxLength={11}
-              />
+                  <span className="text-sm text-slate-900">
+                    {t("merchantApply.phoneNumber")}{" "}
+                    <span className="text-red-500">*</span>
+                  </span>
+                }
+                name="phoneNumber"
+                rules={[
+                  {
+                    required: true,
+                    message: t("merchantApply.phoneNumberRequired"),
+                  },
+                  {
+                    pattern: /^1[3-9]\d{9}$/,
+                    message: t("merchantApply.phoneNumberInvalid"),
+                  },
+                ]}
+              >
+                <Input
+                  size="large"
+                  placeholder={t("merchantApply.phoneNumberPlaceholder")}
+                  className="!border-0 !border-b !rounded-none !px-0 !pb-3"
+                  maxLength={11}
+                />
               </Form.Item>
 
               {/* <div className="h-px bg-slate-100" />

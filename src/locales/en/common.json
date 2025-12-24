@@ -296,6 +296,7 @@
     "categoryPlaceholder": "Please select a product category",
     "categoryRequired": "Please select a product category",
     "imageRequired": "Please upload product image",
+    "imageSizeLimit": "Image size must not exceed 5MB",
     "categoryLoadFailed": "Failed to load categories",
     "imageUploadSuccess": "Image uploaded successfully",
     "imageUploadFailed": "Failed to upload image",

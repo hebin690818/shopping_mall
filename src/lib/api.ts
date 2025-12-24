@@ -527,6 +527,12 @@ async function performRequest<T = any>(
 
   const data = await response.json();
 
+  // 如果响应状态是 401，清除 token 并抛出错误
+  if (response.status === 401) {
+    removeToken();
+    throw new Error(data.message || `API Error: ${response.status}`);
+  }
+
   // 如果响应包含token，自动保存
   if (data.token) {
     setToken(data.token);
@@ -712,6 +718,12 @@ export const api = {
     }
 
     const data = await response.json();
+
+    // 如果响应状态是 401，清除 token 并抛出错误
+    if (response.status === 401) {
+      removeToken();
+      throw new Error(data.message || `API Error: ${response.status}`);
+    }
 
     if (!response.ok) {
       throw new Error(data.message || `API Error: ${response.status}`);

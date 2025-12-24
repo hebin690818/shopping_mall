@@ -377,6 +377,12 @@ export default function MerchantProductEditPage() {
                     ) : (
                       <Upload
                         beforeUpload={(file) => {
+                          // 检查文件大小（5MB = 5 * 1024 * 1024 字节）
+                          const maxSize = 5 * 1024 * 1024; // 5MB
+                          if (file.size > maxSize) {
+                            message.error(t("merchantEdit.imageSizeLimit"));
+                            return false;
+                          }
                           handleImageUpload(file);
                           return false; // 阻止默认上传
                         }}

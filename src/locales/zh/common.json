@@ -296,6 +296,7 @@
     "categoryPlaceholder": "请选择商品分类",
     "categoryRequired": "请选择商品分类",
     "imageRequired": "请上传商品图片",
+    "imageSizeLimit": "图片大小不能超过5M",
     "categoryLoadFailed": "获取分类列表失败",
     "imageUploadSuccess": "图片上传成功",
     "imageUploadFailed": "图片上传失败",

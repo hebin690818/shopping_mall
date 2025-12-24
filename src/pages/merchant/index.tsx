@@ -2,9 +2,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { Button, Typography, Spin, Empty } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
-import { useConnection } from "wagmi";
 import { ROUTES } from "@/routes";
-import { useMarketQuery } from "@/hooks/useMarketContract";
 import { api } from "@/lib/api";
 import type { MerchantListItem } from "@/lib/api";
 import product from "@/assets/product.png";
@@ -14,18 +12,15 @@ const { Title, Text, Paragraph } = Typography;
 export default function MerchantPage() {
   const navigate = useNavigate();
   const { t } = useTranslation("common");
-  const { address, isConnected } = useConnection();
   const [isScrolled, setIsScrolled] = useState(false);
   const [merchants, setMerchants] = useState<MerchantListItem[]>([]);
   const [loadingMerchants, setLoadingMerchants] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
+  const [isMerchant, setIsMerchant] = useState(false);
+  const [isCheckingMerchant, setIsCheckingMerchant] = useState(true);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-
-  const { useIsMerchant } = useMarketQuery();
-  const { data: isMerchant, isLoading: isCheckingMerchant } =
-    useIsMerchant(address);
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -67,6 +62,36 @@ export default function MerchantPage() {
     };
 
     loadInitialMerchants();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // 查询当前登录用户是否为商家（通过后端接口，而不是合约）
+  useEffect(() => {
+    let isMounted = true;
+
+    const checkMerchantStatus = async () => {
+      setIsCheckingMerchant(true);
+      try {
+        const merchant = await api.getMyMerchant({ force: true });
+        if (isMounted) {
+          setIsMerchant(!!merchant);
+        }
+      } catch (error) {
+        console.error("获取我的商家信息失败:", error);
+        if (isMounted) {
+          setIsMerchant(false);
+        }
+      } finally {
+        if (isMounted) {
+          setIsCheckingMerchant(false);
+        }
+      }
+    };
+
+    checkMerchantStatus();
 
     return () => {
       isMounted = false;
@@ -236,11 +261,8 @@ export default function MerchantPage() {
                 shape="round"
                 className="!bg-slate-900 !border-slate-900 h-11 mt-2"
                 onClick={() => navigate(ROUTES.MERCHANT_APPLY)}
-                disabled={!isConnected}
               >
-                {!isConnected
-                  ? t("messages.connectWalletFirst")
-                  : t("merchantPage.applyCta")}
+                {t("merchantPage.applyCta")}
               </Button>
             </section>
           )}
