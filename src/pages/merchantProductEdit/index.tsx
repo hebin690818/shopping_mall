@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Button,
   Form,
@@ -9,7 +9,7 @@ import {
   Upload,
   Spin,
 } from "antd";
-import { PlusOutlined, CloseCircleFilled } from "@ant-design/icons";
+import { PlusOutlined, CloseCircleFilled, DeleteOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
@@ -20,18 +20,27 @@ import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Title, Text } = Typography;
 
+// 规格类型定义
+interface Specification {
+  spec_name: string;
+  options: string[];
+  sort_order: number;
+}
+
 export default function MerchantProductEditPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const { t } = useTranslation("common");
   const [categories, setCategories] = useState<Category[]>([]);
-  const [imageUrl, setImageUrl] = useState<string>("");
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
   const [selectOpen, setSelectOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
+  const pendingFilesRef = useRef<File[]>([]);
+  const [specifications, setSpecifications] = useState<Specification[]>([]);
 
   // 判断是新增还是编辑模式
   const isEditMode = id && id !== "new";
@@ -67,9 +76,10 @@ export default function MerchantProductEditPage() {
     if (!isEditMode || !id) {
       // 新增模式：重置表单为空
       form.resetFields();
-      setImageUrl("");
+      setImageUrls([]);
       setFileList([]);
       setProduct(null);
+      setSpecifications([]);
       return;
     }
 
@@ -103,19 +113,30 @@ export default function MerchantProductEditPage() {
           category_id: productData.category_id,
         });
 
-        // 设置图片
+        // 设置图片（支持逗号分隔的多张图片）
         if (productImageUrl) {
-          setImageUrl(productImageUrl);
-          setFileList([
-            {
-              uid: "-1",
-              name: "product-image",
-              status: "done",
-              url: productImageUrl.startsWith("http")
-                ? productImageUrl
-                : `${API_BASE_URL_IMAGE}${productImageUrl}`,
-            },
-          ]);
+          const urls = productImageUrl
+            .split(",")
+            .filter((url: string) => url.trim());
+          setImageUrls(urls);
+          setFileList(
+            urls.map((url: string, index: number) => ({
+              uid: `-${index + 1}`,
+              name: `product-image-${index + 1}`,
+              status: "done" as const,
+              url: url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`,
+            }))
+          );
+        } else {
+          setImageUrls([]);
+          setFileList([]);
+        }
+
+        // 设置规格数据
+        if ((productData as any).specifications) {
+          setSpecifications((productData as any).specifications);
+        } else {
+          setSpecifications([]);
         }
       } catch (error: any) {
         console.error("获取商品详情失败:", error);
@@ -136,34 +157,125 @@ export default function MerchantProductEditPage() {
     };
   }, [isEditMode, id, form, navigate, t]);
 
-  // 处理图片上传
-  const handleImageUpload = async (file: File) => {
+  // 处理批量图片上传
+  const handleBatchImageUpload = async (files: File[]) => {
+    // 检查总数量是否超过限制
+    const remainingSlots = 9 - imageUrls.length;
+    if (remainingSlots <= 0) {
+      message.error(t("merchantEdit.maxImagesLimit"));
+      return;
+    }
+
+    // 只处理剩余可上传的数量
+    const filesToUpload = files.slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      message.warning(`最多只能上传${remainingSlots}张图片`);
+    }
+
     setUploading(true);
     try {
-      const result = await api.uploadImage(file);
-      setImageUrl(`${API_BASE_URL_IMAGE}${result.url}`);
-      setFileList([
-        {
-          uid: "-1",
-          name: result.filename,
-          status: "done",
-          url: `${API_BASE_URL_IMAGE}${result.url}`,
-        },
-      ]);
-      message.success(t("merchantEdit.imageUploadSuccess"));
-      return false; // 阻止默认上传行为
+      const uploadPromises = filesToUpload.map((file) => api.uploadImage(file));
+      const results = await Promise.all(uploadPromises);
+      
+      const newUrls = results.map((result) => result.url);
+      const updatedUrls = [...imageUrls, ...newUrls];
+      setImageUrls(updatedUrls);
+
+      setFileList(
+        updatedUrls.map((url, index) => ({
+          uid: `-${index + 1}`,
+          name: `product-image-${index + 1}`,
+          status: "done" as const,
+          url: url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`,
+        }))
+      );
+      
+      const successMessage = filesToUpload.length > 1 
+        ? `${t("merchantEdit.imageUploadSuccess")} (${filesToUpload.length}张)`
+        : t("merchantEdit.imageUploadSuccess");
+      message.success(successMessage);
     } catch (error: any) {
       message.error(error.message || t("merchantEdit.imageUploadFailed"));
-      return false;
     } finally {
       setUploading(false);
     }
   };
 
   // 处理图片删除
-  const handleImageRemove = () => {
-    setImageUrl("");
-    setFileList([]);
+  const handleImageRemove = (index: number) => {
+    const updatedUrls = imageUrls.filter((_, i) => i !== index);
+    setImageUrls(updatedUrls);
+    setFileList(
+      updatedUrls.map((url, i) => ({
+        uid: `-${i + 1}`,
+        name: `product-image-${i + 1}`,
+        status: "done" as const,
+        url: url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`,
+      }))
+    );
+  };
+
+  // 添加规格
+  const handleAddSpecification = () => {
+    setSpecifications([
+      ...specifications,
+      {
+        spec_name: "",
+        options: [""],
+        sort_order: specifications.length,
+      },
+    ]);
+  };
+
+  // 删除规格
+  const handleRemoveSpecification = (index: number) => {
+    const updated = specifications
+      .filter((_, i) => i !== index)
+      .map((spec, i) => ({ ...spec, sort_order: i }));
+    setSpecifications(updated);
+  };
+
+  // 更新规格名称
+  const handleSpecNameChange = (index: number, value: string) => {
+    const updated = [...specifications];
+    updated[index] = { ...updated[index], spec_name: value };
+    setSpecifications(updated);
+  };
+
+  // 添加规格选项
+  const handleAddOption = (specIndex: number) => {
+    const updated = [...specifications];
+    updated[specIndex] = {
+      ...updated[specIndex],
+      options: [...updated[specIndex].options, ""],
+    };
+    setSpecifications(updated);
+  };
+
+  // 删除规格选项
+  const handleRemoveOption = (specIndex: number, optionIndex: number) => {
+    const updated = [...specifications];
+    updated[specIndex] = {
+      ...updated[specIndex],
+      options: updated[specIndex].options.filter((_, i) => i !== optionIndex),
+    };
+    setSpecifications(updated);
+  };
+
+  // 更新规格选项
+  const handleOptionChange = (
+    specIndex: number,
+    optionIndex: number,
+    value: string
+  ) => {
+    const updated = [...specifications];
+    updated[specIndex] = {
+      ...updated[specIndex],
+      options: updated[specIndex].options.map((opt, i) =>
+        i === optionIndex ? value : opt
+      ),
+    };
+    setSpecifications(updated);
   };
 
   const handleFinish = async (values: {
@@ -178,7 +290,7 @@ export default function MerchantProductEditPage() {
       return;
     }
 
-    if (!imageUrl) {
+    if (imageUrls.length === 0) {
       message.error(t("merchantEdit.imageRequired"));
       return;
     }
@@ -212,24 +324,59 @@ export default function MerchantProductEditPage() {
         const currentStatus = (product as any)?.status;
         const statusToUpdate = currentStatus || "published";
 
+        // 将图片URL数组用逗号连接
+        const imageUrlString = imageUrls.join(",");
+        // 过滤掉空的规格和选项
+        const validSpecs = specifications
+          .map((spec) => ({
+            ...spec,
+            options: spec.options.filter((opt) => opt.trim() !== ""),
+          }))
+          .filter(
+            (spec) =>
+              spec.spec_name.trim() !== "" && spec.options.length > 0
+          )
+          .map((spec, index) => ({ ...spec, sort_order: index }));
+
         await api.updateProduct({
           id: productId,
           category_id: values.category_id,
           description: values.description || "",
-          image_url: imageUrl,
+          image_url: imageUrlString,
           name: values.name,
           price: Number(values.price),
           status: statusToUpdate,
-        });
+          specifications: validSpecs.length > 0 ? validSpecs : undefined,
+        } as any);
       } else {
         // 新增模式：创建商品
+        // 将图片URL数组拼接API_BASE_URL_IMAGE后用逗号连接
+        const imageUrlString = imageUrls
+          .map((url) => {
+            // 如果已经是完整URL，直接返回；否则拼接API_BASE_URL_IMAGE
+            return url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`;
+          })
+          .join(",");
+        // 过滤掉空的规格和选项
+        const validSpecs = specifications
+          .map((spec) => ({
+            ...spec,
+            options: spec.options.filter((opt) => opt.trim() !== ""),
+          }))
+          .filter(
+            (spec) =>
+              spec.spec_name.trim() !== "" && spec.options.length > 0
+          )
+          .map((spec, index) => ({ ...spec, sort_order: index }));
+
         await api.createProduct({
           category_id: values.category_id,
           description: values.description || "",
-          image_url: imageUrl,
+          image_url: imageUrlString,
           name: values.name,
           price: Number(values.price),
-        });
+          specifications: validSpecs.length > 0 ? validSpecs : undefined,
+        } as any);
       }
 
       // 导航到商家中心并传递刷新标志
@@ -346,26 +493,26 @@ export default function MerchantProductEditPage() {
 
                 <div className="space-y-2">
                   <Text className="text-sm text-slate-900">
-                    {t("merchantEdit.images")}
+                    {t("merchantEdit.images")} ({imageUrls.length}/9)
                   </Text>
                   <div className="flex gap-3 flex-wrap">
                     {/* 显示已上传的图片 */}
-                    {imageUrl ? (
-                      <div className="relative group">
+                    {imageUrls.map((url, index) => (
+                      <div key={index} className="relative group">
                         <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
                           <img
                             src={
-                              imageUrl.startsWith("http")
-                                ? imageUrl
-                                : `${API_BASE_URL_IMAGE}${imageUrl}`
+                              url.startsWith("http")
+                                ? url
+                                : `${API_BASE_URL_IMAGE}${url}`
                             }
-                            alt={t("merchantEdit.images")}
+                            alt={`${t("merchantEdit.images")} ${index + 1}`}
                             className="w-full h-full object-cover"
                           />
                         </div>
                         <button
                           type="button"
-                          onClick={handleImageRemove}
+                          onClick={() => handleImageRemove(index)}
                           className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition-colors duration-200 z-10"
                           aria-label={t("ariaLabels.deleteImage")}
                         >
@@ -374,22 +521,63 @@ export default function MerchantProductEditPage() {
                         {/* 悬停遮罩 */}
                         <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-xl pointer-events-none" />
                       </div>
-                    ) : (
+                    ))}
+                    {/* 上传按钮（最多9张） */}
+                    {imageUrls.length < 9 && (
                       <Upload
+                        multiple
                         beforeUpload={(file) => {
+                          // 检查文件类型（只允许 jpg, png, jpeg, gif, webp）
+                          const allowedTypes = [
+                            "image/jpeg",
+                            "image/jpg",
+                            "image/png",
+                            "image/gif",
+                            "image/webp",
+                          ];
+                          const fileExtension = file.name
+                            .split(".")
+                            .pop()
+                            ?.toLowerCase();
+                          const allowedExtensions = [
+                            "jpg",
+                            "jpeg",
+                            "png",
+                            "gif",
+                            "webp",
+                          ];
+
+                          if (
+                            !allowedTypes.includes(file.type) &&
+                            !allowedExtensions.includes(fileExtension || "")
+                          ) {
+                            message.error(t("merchantEdit.imageFormatLimit"));
+                            return false;
+                          }
+
                           // 检查文件大小（5MB = 5 * 1024 * 1024 字节）
                           const maxSize = 5 * 1024 * 1024; // 5MB
                           if (file.size > maxSize) {
                             message.error(t("merchantEdit.imageSizeLimit"));
                             return false;
                           }
-                          handleImageUpload(file);
+
+                          // 将文件添加到待上传列表
+                          pendingFilesRef.current.push(file);
                           return false; // 阻止默认上传
+                        }}
+                        onChange={() => {
+                          // 当文件选择完成时，批量上传所有待上传的文件
+                          if (pendingFilesRef.current.length > 0) {
+                            const filesToUpload = [...pendingFilesRef.current];
+                            pendingFilesRef.current = [];
+                            handleBatchImageUpload(filesToUpload);
+                          }
                         }}
                         fileList={fileList}
                         listType="picture-card"
-                        maxCount={1}
-                        accept="image/*"
+                        maxCount={9}
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
                         showUploadList={false}
                         className="upload-wrapper"
                       >
@@ -412,6 +600,117 @@ export default function MerchantProductEditPage() {
                       </Upload>
                     )}
                   </div>
+                </div>
+
+                {/* 商品规格 */}
+                <div className="mt-4 pt-4 border-t border-slate-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <Text className="text-sm text-slate-900">
+                      {t("merchantEdit.specifications") || "商品规格"}
+                    </Text>
+                    <Button
+                      type="link"
+                      size="small"
+                      icon={<PlusOutlined />}
+                      onClick={handleAddSpecification}
+                      className="!p-0 !h-auto"
+                    >
+                      {t("merchantEdit.addSpecification") || "添加规格"}
+                    </Button>
+                  </div>
+
+                  {specifications.length === 0 ? (
+                    <div className="text-center py-4 text-slate-400 text-sm">
+                      {t("merchantEdit.noSpecifications") || "暂无规格，点击上方按钮添加"}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {specifications.map((spec, specIndex) => (
+                        <div
+                          key={specIndex}
+                          className="bg-slate-50 rounded-lg p-4 border border-slate-200"
+                        >
+                          <div className="flex items-start gap-2 mb-3">
+                            <div className="flex-1">
+                              <Text className="text-xs text-slate-600 mb-1 block">
+                                {t("merchantEdit.specName") || "规格名称"}
+                              </Text>
+                              <Input
+                                placeholder={
+                                  t("merchantEdit.specNamePlaceholder") ||
+                                  "例如：颜色、尺寸"
+                                }
+                                value={spec.spec_name}
+                                onChange={(e) =>
+                                  handleSpecNameChange(specIndex, e.target.value)
+                                }
+                                className="!border-slate-300"
+                              />
+                            </div>
+                            <Button
+                              type="text"
+                              danger
+                              size="small"
+                              icon={<DeleteOutlined />}
+                              onClick={() => handleRemoveSpecification(specIndex)}
+                              className="!mt-6"
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between">
+                              <Text className="text-xs text-slate-600">
+                                {t("merchantEdit.specOptions") || "规格选项"}
+                              </Text>
+                              <Button
+                                type="link"
+                                size="small"
+                                icon={<PlusOutlined />}
+                                onClick={() => handleAddOption(specIndex)}
+                                className="!p-0 !h-auto text-xs"
+                              >
+                                {t("merchantEdit.addOption") || "添加选项"}
+                              </Button>
+                            </div>
+
+                            {spec.options.map((option, optionIndex) => (
+                              <div
+                                key={optionIndex}
+                                className="flex items-center gap-2"
+                              >
+                                <Input
+                                  placeholder={
+                                    t("merchantEdit.optionPlaceholder") ||
+                                    "输入选项值"
+                                  }
+                                  value={option}
+                                  onChange={(e) =>
+                                    handleOptionChange(
+                                      specIndex,
+                                      optionIndex,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="!border-slate-300"
+                                />
+                                {spec.options.length > 1 && (
+                                  <Button
+                                    type="text"
+                                    danger
+                                    size="small"
+                                    icon={<DeleteOutlined />}
+                                    onClick={() =>
+                                      handleRemoveOption(specIndex, optionIndex)
+                                    }
+                                  />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 {/* 价格信息 */}

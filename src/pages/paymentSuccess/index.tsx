@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 import { api, type Product } from "@/lib/api";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 
 const { Title, Text } = Typography;
 
@@ -193,17 +194,13 @@ export default function PaymentSuccessPage({
                 >
                   <div className="rounded-2xl overflow-hidden bg-slate-100 aspect-square">
                     <img
-                      src={
-                        (item as any).image_url
-                          ? `${(item as any).image_url}`
-                          : item.image || ""
-                      }
+                      src={getFirstImageUrl((item as any).image_url || item.image)}
                       alt={item.name}
                       className="w-full h-full object-cover"
                     />
                   </div>
                   <div className="space-y-2">
-                    <div className="font-medium text-slate-900 text-sm">
+                    <div className="font-medium text-slate-900 text-sm truncate">
                       {item.name}
                     </div>
                     <div className="text-base font-semibold text-slate-900">

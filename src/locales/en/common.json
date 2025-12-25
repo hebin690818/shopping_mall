@@ -305,7 +305,17 @@
     "productUpdateSuccess": "Product updated successfully",
     "productUpdateFailed": "Failed to update product",
     "productLoadFailed": "Failed to load product details",
-    "productNotFound": "Product not found"
+    "productNotFound": "Product not found",
+    "maxImagesLimit": "Maximum 9 images allowed",
+    "imageFormatLimit": "Image format must be JPG, PNG, JPEG, GIF, or WEBP",
+    "specifications": "Product Specifications",
+    "addSpecification": "Add Specification",
+    "noSpecifications": "No specifications, click the button above to add",
+    "specName": "Specification Name",
+    "specNamePlaceholder": "e.g., Color, Size",
+    "specOptions": "Specification Options",
+    "addOption": "Add Option",
+    "optionPlaceholder": "Enter option value"
   },
   "merchantApplyResult": {
     "title": "Apply to Become Merchant",

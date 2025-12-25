@@ -15,6 +15,7 @@ import {
 import { useMarketContract } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { api, type OrderAPI, type OrderStatusAPI } from "@/lib/api";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 import product from "@/assets/product.png";
 
 const { Text, Title } = Typography;
@@ -701,12 +702,12 @@ export default function OrdersPage() {
                     {/* Product Info */}
                     <div className="flex gap-3">
                       <img
-                        src={`${order.product_image_url}`}
+                        src={getFirstImageUrl(order.product_image_url)}
                         alt={order.product_name || order.name}
                         className="w-20 h-20 rounded-lg object-cover flex-shrink-0"
                       />
                       <div className="flex-1 min-w-0">
-                        <Text className="text-sm font-medium block mb-1">
+                        <Text className="text-sm font-medium block mb-1 truncate">
                           {order.product_name || order.name}
                         </Text>
                         <Text className="text-xs text-slate-500 block mb-1">

@@ -1,12 +1,21 @@
-import { Button, Typography } from "antd";
+import { useState } from "react";
+import { Button, Typography, Carousel } from "antd";
 import { useConnection, useConnect } from "wagmi";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import type { Product } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
+import { getAllImageUrls } from "@/lib/imageUtils";
 
 const { Title, Paragraph, Text } = Typography;
+
+// 规格类型定义
+interface Specification {
+  spec_name: string;
+  options: string[];
+  sort_order: number;
+}
 
 export default function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,10 +36,34 @@ export default function ProductDetailPage() {
     image_url: "",
   };
 
-  // 处理图片 URL，优先使用 image_url，如果没有则使用 image
-  const productImage = displayProduct.image_url
-    ? `${displayProduct.image_url}`
-    : displayProduct.image || "";
+  // 处理图片 URL，获取所有图片用于轮播
+  const imageUrlString = displayProduct.image_url || displayProduct.image || "";
+  const productImages = getAllImageUrls(imageUrlString);
+
+  // 获取商品规格
+  const specifications: Specification[] =
+    (displayProduct as any).specifications || [];
+
+  // 管理每个规格的选中状态：{ specIndex: optionIndex }
+  const [selectedSpecs, setSelectedSpecs] = useState<Record<number, number>>(
+    {}
+  );
+
+  // 处理规格选项选择（单选：点击已选中的会取消选择）
+  const handleSpecOptionClick = (specIndex: number, optionIndex: number) => {
+    setSelectedSpecs((prev) => {
+      const newState = { ...prev };
+      if (prev[specIndex] === optionIndex) {
+        // 如果点击的是已选中的，则取消选择
+        delete newState[specIndex];
+      } else {
+        // 否则选中该选项
+        newState[specIndex] = optionIndex;
+      }
+      return newState;
+    });
+  };
+
   const actionLabel = isConnected
     ? t("productDetail.buyNow")
     : t("productDetail.connectWallet");
@@ -71,19 +104,36 @@ export default function ProductDetailPage() {
 
       {/* Content with padding-top to avoid header overlap */}
       <div className="pt-[72px]">
-        {/* Product Image - now in scrollable area */}
+        {/* Product Image Carousel */}
         <div className="px-4 pb-4">
-          <div className="rounded-[16px] overflow-hidden bg-slate-100 w-full mx-auto">
-            <img
-              src={productImage}
-              alt={displayProduct.name}
-              className="w-full h-300 object-cover"
-            />
-          </div>
+          {productImages.length > 0 ? (
+            <div className="rounded-[16px] overflow-hidden bg-slate-100 w-full mx-auto">
+              <Carousel
+                dots={productImages.length > 1}
+                className="product-carousel"
+              >
+                {productImages.map((imageUrl, index) => (
+                  <div key={index}>
+                    <div className="flex items-center justify-center">
+                      <img
+                        src={imageUrl}
+                        alt={`${displayProduct.name} - ${index + 1}`}
+                        className="w-auto h-[300px] object-contain"
+                      />
+                    </div>
+                  </div>
+                ))}
+              </Carousel>
+            </div>
+          ) : (
+            <div className="rounded-[16px] overflow-hidden bg-slate-100 w-full h-[300px] flex items-center justify-center">
+              <Text className="text-slate-400">暂无图片</Text>
+            </div>
+          )}
         </div>
 
         <div className="px-4 space-y-4">
-          <div className="bg-white rounded-lg p-5 shadow-sm space-y-3">
+          <div className="bg-white rounded-lg p-4 shadow-sm space-y-3">
             <Title level={5} className="!mb-0">
               {displayProduct.name}
             </Title>
@@ -95,9 +145,53 @@ export default function ProductDetailPage() {
                 {t("productDetail.stock", { count: 60 })}
               </Text> */}
             </div>
+            {/* 商品规格 */}
+            {specifications.length > 0 && (
+              <div className="space-y-4 pt-3 border-t border-slate-100">
+                {specifications
+                  .sort((a, b) => a.sort_order - b.sort_order)
+                  .map((spec, specIndex) => (
+                    <div
+                      key={specIndex}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <Text className="text-sm font-semibold text-slate-800">
+                        {spec.spec_name}:
+                      </Text>
+                      <div className="flex flex-wrap gap-2.5">
+                        {spec.options.map((option, optionIndex) => {
+                          const isSelected =
+                            selectedSpecs[specIndex] === optionIndex;
+                          return (
+                            <button
+                              key={optionIndex}
+                              type="button"
+                              onClick={() =>
+                                handleSpecOptionClick(specIndex, optionIndex)
+                              }
+                              className={`
+                                px-2 py-1 rounded-lg text-sm font-medium transition-all duration-200
+                                border-2 min-w-[70px] text-center cursor-pointer
+                                active:scale-95
+                                ${
+                                  isSelected
+                                    ? "bg-slate-900 text-white border-slate-900 shadow-lg shadow-slate-900/20 scale-[1.02]"
+                                    : "bg-white text-slate-700 border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm"
+                                }
+                              `}
+                            >
+                              {option}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            )}
           </div>
 
-          <div className="bg-white rounded-lg p-5 shadow-sm space-y-3">
+          <div className="bg-white rounded-lg p-4 shadow-sm space-y-3">
             <Title level={5} className="!mb-1">
               {t("productDetail.introTitle")}
             </Title>
@@ -106,7 +200,7 @@ export default function ProductDetailPage() {
             </Paragraph>
           </div>
 
-          <div className="bg-white rounded-lg p-5 shadow-sm space-y-3">
+          <div className="bg-white rounded-lg p-4 shadow-sm space-y-3">
             <Title level={5} className="!mb-1">
               {t("productDetail.deliveryTitle")}
             </Title>

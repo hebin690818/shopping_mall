@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { api } from "@/lib/api";
 import type { MerchantListItem } from "@/lib/api";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 import product from "@/assets/product.png";
 
 const { Title, Text, Paragraph } = Typography;
@@ -291,13 +292,13 @@ export default function MerchantPage() {
                     >
                       <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100">
                         <img
-                          src={item.cover || item.image_url || product}
+                          src={getFirstImageUrl(item.cover || item.image_url) || product}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />
                       </div>
                       <div className="flex-1">
-                        <div className="text-sm font-semibold text-slate-900">
+                        <div className="text-sm font-semibold text-slate-900 truncate">
                           {item.name}
                         </div>
                         <div className="text-xs text-slate-500 mt-1">

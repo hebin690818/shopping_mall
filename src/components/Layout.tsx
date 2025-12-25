@@ -34,6 +34,7 @@ export default function AppLayout() {
     ROUTES.MERCHANT,
     ROUTES.ORDERS,
     ROUTES.PROFILE,
+    ROUTES.MERCHANT_CENTER,
   ] as string[]).includes(location.pathname);
 
   return (

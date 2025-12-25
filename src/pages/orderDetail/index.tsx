@@ -17,6 +17,7 @@ import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { type Order } from "../orders";
 import { OrderStatus } from "@/lib/contractUtils";
 import { ROUTES } from "@/routes";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 import product from "@/assets/product.png";
 import backSvg from "@/assets/back.svg";
 
@@ -84,15 +85,15 @@ export default function OrderDetailPage() {
   // 优先从上一页传递的 state 中获取订单数据
   const stateOrder = (location.state as { order?: Order })?.order;
 
-  // 确定订单索引：优先使用 state 中的 orderIndex，否则尝试从 id 解析
-  const orderIndex = stateOrder?.orderIndex 
-    ? stateOrder.orderIndex 
-    : (id && !isNaN(Number(id)) ? BigInt(id) : null);
+  // 确定订单索引：只使用 state 中的 orderIndex，不要将订单ID当作订单索引
+  // 订单ID和合约订单索引是不同的概念，订单索引是合约中订单数组的索引（从0开始）
+  const orderIndex = stateOrder?.orderIndex ?? null;
 
-  // 如果 state 中没有订单数据，尝试从合约查询订单（如果 orderIndex 存在）
+  // 如果 state 中有 orderIndex，尝试从合约查询订单详情以验证订单存在
+  // 注意：只有在有有效的 orderIndex 时才查询合约，避免使用错误的索引值
   const { data: contractOrder } = useOrderDetails(
-    orderIndex || 0n, 
-    !!orderIndex && !stateOrder
+    orderIndex ?? 0n, 
+    !!orderIndex
   ) as {
     data?: {
       orderId: bigint;
@@ -137,7 +138,7 @@ export default function OrderDetailPage() {
     } : {}),
   } : contractOrder ? {
     id: id || '',
-    orderNumber: `ORD-${orderIndex}`,
+    orderNumber: `ORD-${orderIndex ?? ''}`,
     date: new Date().toISOString().split('T')[0],
     status: contractOrder.status === OrderStatus.Pending ? 'pending' 
       : contractOrder.status === OrderStatus.Completed ? 'completed' 
@@ -190,8 +191,15 @@ export default function OrderDetailPage() {
       return;
     }
 
+    // 验证订单索引和合约订单数据是否存在
     if (!orderIndex) {
-      message.error(t("messages.invalidOrderIndex"));
+      message.error(t("messages.invalidOrderIndex") || "订单索引无效，无法执行合约操作");
+      return;
+    }
+
+    // 验证合约订单是否存在，如果查询失败或订单不存在，不允许操作
+    if (!order.contractOrder) {
+      message.error(t("messages.invalidOrderIndex") || "合约订单不存在，无法确认收货");
       return;
     }
 
@@ -246,8 +254,15 @@ export default function OrderDetailPage() {
       return;
     }
 
+    // 验证订单索引和合约订单数据是否存在
     if (!orderIndex) {
-      message.error(t("messages.invalidOrderIndex"));
+      message.error(t("messages.invalidOrderIndex") || "订单索引无效，无法执行合约操作");
+      return;
+    }
+
+    // 验证合约订单是否存在，如果查询失败或订单不存在，不允许操作
+    if (!order.contractOrder) {
+      message.error(t("messages.invalidOrderIndex") || "合约订单不存在，无法执行退款");
       return;
     }
 
@@ -298,8 +313,9 @@ export default function OrderDetailPage() {
       return;
     }
 
-    if (!orderIndex) {
-      message.error(t("messages.invalidOrderIndex"));
+    // 验证订单索引和合约订单数据是否存在
+    if (!orderIndex || !order.contractOrder) {
+      message.error(t("messages.invalidOrderIndex") || "订单索引无效或合约订单不存在，无法执行退款");
       return;
     }
 
@@ -455,13 +471,13 @@ export default function OrderDetailPage() {
             <div className="flex gap-3 pt-2">
               <div className="relative w-20 h-20 rounded-lg overflow-hidden flex-shrink-0">
                 <img
-                  src={`${order.product_image_url}`}
+                  src={getFirstImageUrl(order.product_image_url)}
                   alt={order.product_name || order.name}
                   className="w-full h-full object-cover"
                 />
               </div>
               <div className="flex-1 min-w-0">
-                <Text className="text-sm font-medium block mb-1 text-slate-900">
+                <Text className="text-sm font-medium block mb-1 text-slate-900 truncate">
                   {order.product_name || order.name}
                 </Text>
                 <div className="flex items-center justify-between mt-2">
@@ -537,8 +553,8 @@ export default function OrderDetailPage() {
           </div>
         </div>
 
-        {/* 操作按钮区域 */}
-        {orderIndex && order.contractOrder && (
+        {/* 操作按钮区域 - 只有在有有效的订单索引和合约订单数据时才显示 */}
+        {stateOrder?.orderIndex && order.contractOrder && (
           <div className="mt-4 px-4 space-y-3">
             {/* 买家确认收货按钮 - 仅当订单状态为 pending 时显示 */}
             {order.status === 'pending' && 

@@ -6,6 +6,7 @@ import { ROUTES } from "@/routes";
 import backSvg from "@/assets/back.svg";
 import { api, type Product } from "@/lib/api";
 import { useAuth } from "@/hooks/useAuth";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 
 const { Title, Text } = Typography;
 
@@ -213,7 +214,7 @@ export default function MerchantCenterPage() {
   }, [activeTab]);
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-4">
+    <div className="min-h-screen pb-20 overflow-x-hidden bg-slate-50">
       {/* Fixed Header */}
       <div className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-100 shadow-sm">
         <div className="relative flex items-center justify-center p-4">
@@ -294,12 +295,12 @@ export default function MerchantCenterPage() {
                 >
                   <div className="flex gap-3">
                     <img
-                      src={`${item.image_url}`}
+                      src={getFirstImageUrl(item.image_url)}
                       alt={item.name}
                       className="w-20 h-20 rounded-2xl object-cover"
                     />
                     <div className="flex-1">
-                      <Text className="block text-sm font-medium text-slate-900 mb-1">
+                      <Text className="block text-sm font-medium text-slate-900 mb-1 truncate">
                         {item.name}
                       </Text>
                       <Text className="block text-sm font-semibold text-slate-900 mb-1">

@@ -14,6 +14,7 @@ import {
   needsApproval,
   parseTokenAmount,
 } from "@/lib/contractUtils";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 import backSvg from "@/assets/back.svg";
 import { api, type Product, type Address } from "@/lib/api";
 
@@ -89,10 +90,8 @@ export default function OrderConfirmPage() {
     merchant_address: "",
   };
 
-  // 处理图片 URL，优先使用 image_url，如果没有则使用 image
-  const productImage = displayProduct.image_url
-    ? `${displayProduct.image_url}`
-    : displayProduct.image || "";
+  // 处理图片 URL，获取第一张图片
+  const productImage = getFirstImageUrl(displayProduct.image_url || displayProduct.image);
 
   const unitPrice = useMemo(() => {
     const priceStr = String(displayProduct.price || "0");
@@ -352,7 +351,7 @@ export default function OrderConfirmPage() {
                 />
               </div>
               <div className="flex-1 space-y-2">
-                <div className="font-semibold text-slate-900">
+                <div className="font-semibold text-slate-900 truncate">
                   {displayProduct.name}
                 </div>
                 <div className="text-lg font-semibold text-slate-900">

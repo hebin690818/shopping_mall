@@ -8,6 +8,7 @@ import { ROUTES } from "@/routes";
 import { useAuth } from "@/hooks/useAuth";
 import { api } from "@/lib/api";
 import type { Category, Product } from "@/lib/api";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 
 const { Text } = Typography;
 
@@ -491,7 +492,7 @@ export default function HomePage({}: HomePageProps) {
                         className="w-full h-full object-cover"
                       />
                     </div>
-                    <Text className="text-xs text-slate-700">
+                    <Text className="text-xs text-slate-700 truncate">
                       {category.name}
                     </Text>
                   </div>
@@ -537,15 +538,15 @@ export default function HomePage({}: HomePageProps) {
                   <div>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={`${product.image_url}`}
+                        src={getFirstImageUrl(product.image_url || product.image)}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="p-3">
-                      <Text className="text-sm font-medium block mb-1 ellipsis">
+                      <div className="text-sm font-medium block mb-2 truncate">
                         {product.name}
-                      </Text>
+                      </div>
                       <div className="flex justify-between items-center gap-1">
                         <Text className="text-sm font-bold text-red-500 block ">
                           {product.price}

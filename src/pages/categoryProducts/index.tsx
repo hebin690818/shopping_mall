@@ -6,6 +6,7 @@ import { ROUTES } from "@/routes";
 import { api } from "@/lib/api";
 import type { Product, Category } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
+import { getFirstImageUrl } from "@/lib/imageUtils";
 
 const { Text, Title } = Typography;
 
@@ -207,13 +208,13 @@ export default function CategoryProductsPage() {
                   <div>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={`${product.image_url || product.image}`}
+                        src={getFirstImageUrl(product.image_url || product.image)}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />
                     </div>
                     <div className="p-3">
-                      <Text className="text-sm font-medium block mb-1 ellipsis">
+                      <Text className="text-sm font-medium block mb-1 truncate">
                         {product.name}
                       </Text>
                       <div className="flex justify-between items-center gap-1">

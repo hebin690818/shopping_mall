@@ -34,7 +34,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     orderNumber: apiOrder.order_no || `ORD-${apiOrder.id}`,
     date: apiOrder.created_at?.split("T")[0] || "",
     status: mapApiStatusToOrderStatus(apiOrder.status),
-    apiStatus: apiOrder.status, // 保存原始API状态
+    apiStatus: apiOrder.status,
     image: apiOrder.image || apiOrder.image_url || productImage,
     name: apiOrder.name || "",
     store: apiOrder.store || apiOrder.merchant_name || "",
