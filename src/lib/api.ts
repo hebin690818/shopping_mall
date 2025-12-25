@@ -131,14 +131,9 @@ class RequestManager {
       force?: boolean; // 强制重新请求，忽略缓存
     }
   ): Promise<T> {
-    // 如果强制刷新，先清除缓存和进行中的请求
+    // 如果强制刷新，先清除缓存
     if (options?.force) {
       this.cache.delete(key);
-      const pending = this.pendingRequests.get(key);
-      if (pending) {
-        pending.abortController.abort();
-        this.pendingRequests.delete(key);
-      }
     }
 
     // 检查缓存（仅 GET 请求且未强制刷新）
@@ -152,7 +147,20 @@ class RequestManager {
     // 检查是否有正在进行的相同请求
     const pending = this.pendingRequests.get(key);
     if (pending) {
-      return pending.promise as Promise<T>;
+      // 如果强制刷新，但请求刚发起不久（100ms内），复用该请求而不是取消
+      if (options?.force) {
+        const requestAge = Date.now() - pending.timestamp;
+        if (requestAge < 100) {
+          // 请求刚发起，复用它
+          return pending.promise as Promise<T>;
+        }
+        // 请求已经发起一段时间，取消它并创建新请求
+        pending.abortController.abort();
+        this.pendingRequests.delete(key);
+      } else {
+        // 未强制刷新，直接复用进行中的请求
+        return pending.promise as Promise<T>;
+      }
     }
 
     // 创建新的请求
@@ -170,6 +178,8 @@ class RequestManager {
       .catch((error) => {
         // 请求失败，移除进行中的请求
         this.pendingRequests.delete(key);
+        // 如果是 AbortError（请求被取消），这是预期的行为，不应该抛出错误
+        // 但为了保持 API 的一致性，仍然抛出，由调用方决定如何处理
         throw error;
       });
 

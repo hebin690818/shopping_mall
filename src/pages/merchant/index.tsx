@@ -70,7 +70,14 @@ export default function MerchantPage() {
   }, []);
 
   // 查询当前登录用户是否为商家（通过后端接口，而不是合约）
+  const checkMerchantRef = useRef(false);
   useEffect(() => {
+    // 防止 StrictMode 导致的重复请求
+    if (checkMerchantRef.current) {
+      return;
+    }
+    checkMerchantRef.current = true;
+
     let isMounted = true;
 
     const checkMerchantStatus = async () => {
@@ -80,7 +87,11 @@ export default function MerchantPage() {
         if (isMounted) {
           setIsMerchant(!!merchant);
         }
-      } catch (error) {
+      } catch (error: any) {
+        // 忽略 AbortError，这是预期的行为（当 force: true 时会取消之前的请求）
+        if (error?.name === "AbortError") {
+          return;
+        }
         console.error("获取我的商家信息失败:", error);
         if (isMounted) {
           setIsMerchant(false);
@@ -96,6 +107,7 @@ export default function MerchantPage() {
 
     return () => {
       isMounted = false;
+      checkMerchantRef.current = false;
     };
   }, []);
 

@@ -133,11 +133,39 @@ export default function MerchantProductEditPage() {
         }
 
         // 设置规格数据
-        if ((productData as any).specifications) {
-          setSpecifications((productData as any).specifications);
-        } else {
-          setSpecifications([]);
+        let specsData: Specification[] = [];
+        const rawSpecs = (productData as any).specifications;
+        
+        if (rawSpecs) {
+          try {
+            // 如果规格数据是字符串，尝试解析JSON
+            if (typeof rawSpecs === "string") {
+              const parsed = JSON.parse(rawSpecs);
+              specsData = Array.isArray(parsed) ? parsed : [];
+            } else if (Array.isArray(rawSpecs)) {
+              specsData = rawSpecs;
+            }
+            
+            // 验证和规范化规格数据格式
+            specsData = specsData
+              .filter((spec: any) => spec && (spec.spec_name || spec.name))
+              .map((spec: any, index: number) => ({
+                spec_name: spec.spec_name || spec.name || "",
+                options: Array.isArray(spec.options) 
+                  ? spec.options
+                      .map((opt: any) => String(opt || "").trim())
+                      .filter((opt: string) => opt !== "")
+                  : [],
+                sort_order: spec.sort_order !== undefined ? spec.sort_order : index,
+              }))
+              .filter((spec) => spec.spec_name.trim() !== "" && spec.options.length > 0);
+          } catch (error) {
+            console.error("解析规格数据失败:", error);
+            specsData = [];
+          }
         }
+        
+        setSpecifications(specsData);
       } catch (error: any) {
         console.error("获取商品详情失败:", error);
         if (isMounted) {
