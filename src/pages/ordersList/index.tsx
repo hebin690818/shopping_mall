@@ -18,6 +18,8 @@ import { useMarketContract } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { api } from "@/lib/api";
 import { getFirstImageUrl } from "@/lib/imageUtils";
+import { formatDateTime, formatOrderNumber } from "@/lib/dateUtils";
+import { copyToClipboard } from "@/lib/clipboardUtils";
 import backSvg from "@/assets/back.svg";
 
 const { Text, Title } = Typography;
@@ -75,11 +77,10 @@ export default function OrdersListPage() {
   // 复制运单号
   const handleCopyTrackingNumber = async (trackingNumber: string) => {
     if (!trackingNumber) return;
-    try {
-      await navigator.clipboard.writeText(trackingNumber);
+    const success = await copyToClipboard(trackingNumber);
+    if (success) {
       message.success(t("profile.copy"));
-    } catch (err) {
-      console.error("复制失败:", err);
+    } else {
       message.error(t("messages.copyFailed"));
     }
   };
@@ -126,6 +127,11 @@ export default function OrdersListPage() {
       return;
     }
 
+    if (!data?.company) {
+      message.warning(t("messages.fillLogisticsInfo"));
+      return;
+    }
+
     if (!address) {
       message.warning(t("messages.connectWalletFirst"));
       return;
@@ -144,6 +150,7 @@ export default function OrdersListPage() {
         merchant_address: address,
         order_id: orderIdNum,
         tracking_number: data.waybill,
+        shipping_company: data.company,
       });
 
       message.success(t("messages.uploadSuccess"));
@@ -160,9 +167,7 @@ export default function OrdersListPage() {
         refreshOrders();
       }
     } catch (error: any) {
-      message.error(
-        error?.message || t("messages.loadFailed")
-      );
+      message.error(error?.message || t("messages.loadFailed"));
     }
   };
 
@@ -171,9 +176,8 @@ export default function OrdersListPage() {
       case "completed":
         return (
           <Button
-            size="small"
             shape="round"
-            className="!bg-purple-500 !border-purple-500 !text-white px-3"
+            className="!bg-purple-500 !border-purple-500 !text-white px-3 text-xs"
             icon={<CheckCircleOutlined />}
           >
             {t("ordersCenter.tabs.completed")}
@@ -182,9 +186,8 @@ export default function OrdersListPage() {
       case "delivering":
         return (
           <Button
-            size="small"
             shape="round"
-            className="!bg-blue-500 !border-blue-500 !text-white px-3"
+            className="!bg-blue-500 !border-blue-500 !text-white px-3 text-xs"
             icon={<CarOutlined />}
           >
             {t("ordersCenter.tabs.delivering")}
@@ -193,9 +196,8 @@ export default function OrdersListPage() {
       case "pending":
         return (
           <Button
-            size="small"
             shape="round"
-            className="!bg-orange-500 !border-orange-500 !text-white px-3"
+            className="!bg-orange-500 !border-orange-500 !text-white px-3 text-xs"
             icon={<ClockCircleOutlined />}
           >
             {t("ordersCenter.tabs.pending")}
@@ -204,9 +206,8 @@ export default function OrdersListPage() {
       default:
         return (
           <Button
-            size="small"
             shape="round"
-            className="!bg-slate-100 !border-slate-200 !text-slate-600 px-3"
+            className="!bg-slate-100 !border-slate-200 !text-slate-600 px-3 text-xs"
             icon={<ClockCircleOutlined />}
           >
             {t("ordersCenter.statusUnfinished")}
@@ -309,9 +310,7 @@ export default function OrdersListPage() {
     if (!currentRefundOrder || processingRefund) return;
 
     if (!rejectReason.trim()) {
-      message.warning(
-        t("ordersCenter.rejectReasonRequired")
-      );
+      message.warning(t("ordersCenter.rejectReasonRequired"));
       return;
     }
 
@@ -349,9 +348,7 @@ export default function OrdersListPage() {
     if (!currentRefundOrder || processingRefund) return;
 
     if (!rejectReason.trim()) {
-      message.warning(
-        t("ordersCenter.rejectReasonRequired")
-      );
+      message.warning(t("ordersCenter.rejectReasonRequired"));
       return;
     }
 
@@ -485,7 +482,7 @@ export default function OrdersListPage() {
                         <div>
                           <Text className="text-xs text-slate-500 block">
                             {t("ordersCenter.orderNo", {
-                              no: order.orderNumber,
+                              no: formatOrderNumber(order.orderNumber),
                             })}
                           </Text>
                           {order.date && (
@@ -496,9 +493,8 @@ export default function OrdersListPage() {
                         </div>
                         {refundStatus ? (
                           <Button
-                            size="small"
                             shape="round"
-                            className={`!bg-slate-100 !border-slate-200 ${refundStatus.color} px-3`}
+                            className={`!bg-slate-100 !border-slate-200 ${refundStatus.color} px-3 text-xs`}
                             icon={refundStatus.icon}
                           >
                             {refundStatus.text}
@@ -519,9 +515,9 @@ export default function OrdersListPage() {
                           <Text className="text-sm font-medium block mb-1 truncate">
                             {order.product_name || order.name}
                           </Text>
-                          <Text className="text-xs text-slate-500 block mb-1">
+                          {/* <Text className="text-xs text-slate-500 block mb-1">
                             {order.store}
-                          </Text>
+                          </Text> */}
                           <div className="flex items-center justify-between">
                             <Text className="text-base font-semibold text-slate-900">
                               ${order.price}
@@ -540,38 +536,19 @@ export default function OrdersListPage() {
                             amount: order.total,
                           })}
                         </Text>
-                        {order.status === "completed" &&
-                          !isRefundRequested &&
-                          !isRefunded && (
-                            <button
-                              type="button"
-                              className="text-xs text-slate-500 flex items-center gap-1"
-                              onClick={() =>
-                                navigate(
-                                  ROUTES.ORDER_DETAIL.replace(":id", order.id),
-                                  { state: { order } }
-                                )
-                              }
-                            >
-                              {t("ordersCenter.viewDetails")}
-                              <span className="text-slate-400">›</span>
-                            </button>
-                          )}
-                        {(isRefundRequested || isRefunded) && (
-                          <button
-                            type="button"
-                            className="text-xs text-slate-500 flex items-center gap-1"
-                            onClick={() =>
-                              navigate(
-                                ROUTES.ORDER_DETAIL.replace(":id", order.id),
-                                { state: { order } }
-                              )
-                            }
-                          >
-                            {t("ordersCenter.viewDetails")}
-                            <span className="text-slate-400">›</span>
-                          </button>
-                        )}
+                        <button
+                          type="button"
+                          className="text-xs text-slate-500 flex items-center gap-1"
+                          onClick={() =>
+                            navigate(
+                              ROUTES.ORDER_DETAIL.replace(":id", order.id),
+                              { state: { order } }
+                            )
+                          }
+                        >
+                          {t("ordersCenter.viewDetails")}
+                          <span className="text-slate-400">›</span>
+                        </button>
                       </div>
                     </div>
 
@@ -610,6 +587,25 @@ export default function OrdersListPage() {
                           <Text className="text-xs text-slate-500 block">
                             {t("ordersCenter.uploadLogisticsTitle")}
                           </Text>
+
+                          <Input
+                            size="large"
+                            placeholder={t("ordersCenter.companyPlaceholder")}
+                            className="!rounded-xl !bg-slate-50 !border-slate-200 text-sm"
+                            value={
+                              order.logisticsCompany ||
+                              logisticsData[order.id]?.company ||
+                              ""
+                            }
+                            onChange={(e) =>
+                              handleLogisticsChange(
+                                order.id,
+                                "company",
+                                e.target.value
+                              )
+                            }
+                            disabled={!!order.tracking_number}
+                          />
                           <Input
                             size="large"
                             placeholder={t("ordersCenter.waybillPlaceholder")}
@@ -705,12 +701,12 @@ export default function OrdersListPage() {
             <div>
               <Text className="text-xs text-slate-500 block">
                 {t("ordersCenter.orderNo", {
-                  no: currentRefundOrder.orderNumber,
+                  no: formatOrderNumber(currentRefundOrder.orderNumber),
                 })}
               </Text>
               {currentRefundOrder.date && (
                 <Text className="text-xs text-slate-400 block mt-1">
-                  {currentRefundOrder.date}
+                  {formatDateTime(currentRefundOrder.date)}
                 </Text>
               )}
             </div>
@@ -718,7 +714,10 @@ export default function OrdersListPage() {
             {/* 产品信息 */}
             <div className="flex gap-3 bg-slate-50 rounded-lg p-3">
               <img
-                src={getFirstImageUrl(currentRefundOrder.product_image_url || currentRefundOrder.image)}
+                src={getFirstImageUrl(
+                  currentRefundOrder.product_image_url ||
+                    currentRefundOrder.image
+                )}
                 alt={currentRefundOrder.product_name || currentRefundOrder.name}
                 className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
               />
@@ -739,6 +738,45 @@ export default function OrdersListPage() {
                 </div>
               </div>
             </div>
+
+            {/* 退货物流信息 */}
+            {currentRefundOrder.return_shipping_company && (
+              <div className="flex items-center justify-between">
+                <Text className="text-sm text-slate-600">
+                  {t("ordersCenter.refundModal.returnShippingCompany")}
+                </Text>
+                <Text className="text-sm text-slate-900">
+                  {currentRefundOrder.return_shipping_company}
+                </Text>
+              </div>
+            )}
+            {currentRefundOrder.return_tracking_number && (
+              <div className="flex items-center justify-between">
+                <Text className="text-sm text-slate-600">
+                  {t("ordersCenter.refundModal.returnTrackingNumber")}
+                </Text>
+                <Text className="text-sm text-slate-900 flex items-center gap-1">
+                  {currentRefundOrder.return_tracking_number}{" "}
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      const success = await copyToClipboard(
+                        currentRefundOrder.return_tracking_number || ""
+                      );
+                      if (success) {
+                        message.success(t("profile.copy"));
+                      } else {
+                        message.error(t("messages.copyFailed"));
+                      }
+                    }}
+                    className="text-slate-400 hover:text-slate-600 transition-colors flex items-center justify-center"
+                    aria-label={t("ariaLabels.copyAddress")}
+                  >
+                    <CopyOutlined className="text-sm" />
+                  </button>
+                </Text>
+              </div>
+            )}
 
             <div className="flex gap-3 pt-2">
               <Button
@@ -787,12 +825,12 @@ export default function OrdersListPage() {
             <div>
               <Text className="text-xs text-slate-500 block">
                 {t("ordersCenter.orderNo", {
-                  no: currentRefundOrder.orderNumber,
+                  no: formatOrderNumber(currentRefundOrder.orderNumber),
                 })}
               </Text>
               {currentRefundOrder.date && (
                 <Text className="text-xs text-slate-400 block mt-1">
-                  {currentRefundOrder.date}
+                  {formatDateTime(currentRefundOrder.date)}
                 </Text>
               )}
             </div>
@@ -800,7 +838,10 @@ export default function OrdersListPage() {
             {/* 产品信息 */}
             <div className="flex gap-3 bg-slate-50 rounded-lg p-3">
               <img
-                src={getFirstImageUrl(currentRefundOrder.product_image_url || currentRefundOrder.image)}
+                src={getFirstImageUrl(
+                  currentRefundOrder.product_image_url ||
+                    currentRefundOrder.image
+                )}
                 alt={currentRefundOrder.product_name || currentRefundOrder.name}
                 className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
               />

@@ -1,4 +1,4 @@
-import { Card, Typography, Form, Input } from "antd";
+import { Card, Typography, Form, Input, message } from "antd";
 import { CopyOutlined } from "@ant-design/icons";
 import { useConnection } from "wagmi";
 import { useTranslation } from "react-i18next";
@@ -9,6 +9,7 @@ import { useRef, useState, useEffect } from "react";
 import i18n from "@/i18n/config";
 import backSvg from "@/assets/back.svg";
 import { api, type MerchantDetail, type Address } from "@/lib/api";
+import { copyToClipboard } from "@/lib/clipboardUtils";
 
 const { Title, Text } = Typography;
 
@@ -188,9 +189,14 @@ export default function SettingsPage() {
                     type="button"
                     className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-100 text-slate-500"
                     aria-label={t("ariaLabels.copyAddress")}
-                    onClick={() => {
+                    onClick={async () => {
                       if (address) {
-                        navigator.clipboard.writeText(address);
+                        const success = await copyToClipboard(address);
+                        if (success) {
+                          message.success(t("profile.copy"));
+                        } else {
+                          message.error(t("messages.copyFailed"));
+                        }
                       }
                     }}
                   >

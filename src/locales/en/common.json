@@ -146,7 +146,8 @@
     "createFailed": "Failed to create, please try again",
     "updateSuccess": "Updated successfully",
     "updateFailed": "Failed to update, please try again",
-    "merchantAddressIsSelf": "You cannot buy your own product"
+    "merchantAddressIsSelf": "You cannot buy your own product",
+    "shippingAddressRequired": "Please add a shipping address first"
   },
   "loading": {
     "confirmingReceipt": "Confirming receipt...",
@@ -179,7 +180,7 @@
     "tip": "After submission it will enter review, expected 1-3 working days."
   },
   "orderDetail": {
-    "title": "Order Details",
+    "title": "Merchant Order",
     "orderNotFound": "Order not found",
     "orderNo": "Order No: {{no}}",
     "confirmReceipt": "Confirm Receipt",
@@ -194,6 +195,11 @@
     "shipTime": "Shipping Time",
     "payTime": "Payment Time",
     "updateTime": "Update Time",
+    "merchantName": "Merchant Name",
+    "merchantPhone": "Merchant Phone",
+    "buyerName": "Buyer Name",
+    "buyerPhone": "Buyer Phone",
+    "buyerAddress": "Buyer Address",
     "refundRejectionReason": "Refund Rejection Reason",
     "confirmRefundMessage": "Are you sure you want to refund to the buyer? This action cannot be undone.",
     "confirmRejectRefundMessage": "Are you sure you want to reject the refund? This action cannot be undone."
@@ -206,7 +212,8 @@
     "currentlySelected": "Currently Selected",
     "copyOrderNumber": "Copy Order Number",
     "copyAddress": "Copy Address",
-    "deleteImage": "Delete Image"
+    "deleteImage": "Delete Image",
+    "copyTrackingNumber": "Copy"
   },
   "globalLoading": {
     "defaultMessage": "Loading...",
@@ -346,7 +353,7 @@
     "cancelOrder": "Cancel Order",
     "payNow": "Pay Now",
     "noOrders": "No orders",
-    "uploadLogisticsTitle": "Upload Tracking Number",
+    "uploadLogisticsTitle": "Logistics Information",
     "waybillPlaceholder": "Enter tracking number",
     "companyPlaceholder": "Enter logistics company",
     "upload": "Upload",
@@ -368,6 +375,16 @@
       "refundRequested": "Refund Requested",
       "refunded": "Refunded",
       "refundRejected": "Refund Rejected"
+    },
+    "refundModal": {
+      "title": "Apply for Refund",
+      "productInfo": "Product Information",
+      "returnShippingCompany": "Return Shipping Company",
+      "returnShippingCompanyPlaceholder": "Please enter return shipping company",
+      "returnTrackingNumber": "Return Tracking Number",
+      "returnTrackingNumberPlaceholder": "Please enter return tracking number",
+      "submit": "Submit Application",
+      "cancel": "Cancel"
     }
   },
   "checkout": {

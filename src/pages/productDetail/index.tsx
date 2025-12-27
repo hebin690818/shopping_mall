@@ -107,7 +107,7 @@ export default function ProductDetailPage() {
         {/* Product Image Carousel */}
         <div className="px-4 pb-4">
           {productImages.length > 0 ? (
-            <div className="rounded-[16px] overflow-hidden bg-slate-100 w-full mx-auto">
+            <div className="rounded-[16px] overflow-hidden w-full mx-auto">
               <Carousel
                 dots={productImages.length > 1}
                 className="product-carousel"
@@ -118,7 +118,7 @@ export default function ProductDetailPage() {
                       <img
                         src={imageUrl}
                         alt={`${displayProduct.name} - ${index + 1}`}
-                        className="w-auto h-[300px] object-contain"
+                        className="w-auto h-[240px] object-contain"
                       />
                     </div>
                   </div>

@@ -10,10 +10,7 @@ import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { useMarketContract } from "@/hooks/useMarketContract";
 import { useTokenContract, useTokenQuery } from "@/hooks/useTokenContract";
 import { MARKET_CONTRACT_ADDRESS } from "@/lib/config";
-import {
-  needsApproval,
-  parseTokenAmount,
-} from "@/lib/contractUtils";
+import { needsApproval, parseTokenAmount } from "@/lib/contractUtils";
 import { getFirstImageUrl } from "@/lib/imageUtils";
 import backSvg from "@/assets/back.svg";
 import { api, type Product, type Address } from "@/lib/api";
@@ -68,7 +65,7 @@ export default function OrderConfirmPage() {
     const fetchAddresses = async () => {
       await loadAddresses();
     };
-    
+
     fetchAddresses();
   }, [location.pathname]);
 
@@ -91,7 +88,9 @@ export default function OrderConfirmPage() {
   };
 
   // 处理图片 URL，获取第一张图片
-  const productImage = getFirstImageUrl(displayProduct.image_url || displayProduct.image);
+  const productImage = getFirstImageUrl(
+    displayProduct.image_url || displayProduct.image
+  );
 
   const unitPrice = useMemo(() => {
     const priceStr = String(displayProduct.price || "0");
@@ -129,6 +128,12 @@ export default function OrderConfirmPage() {
 
     if (!isConnected || !address) {
       message.error(t("messages.connectWalletFirst"));
+      return;
+    }
+
+    // 检查是否存在收货地址
+    if (!shippingAddress) {
+      message.error(t("messages.shippingAddressRequired"));
       return;
     }
 
@@ -350,8 +355,8 @@ export default function OrderConfirmPage() {
                   className="w-full h-full object-cover"
                 />
               </div>
-              <div className="flex-1 space-y-2">
-                <div className="font-semibold text-slate-900 truncate">
+              <div className="flex-1">
+                <div className="font-semibold text-slate-900 line-clamp-2">
                   {displayProduct.name}
                 </div>
                 <div className="text-lg font-semibold text-slate-900">

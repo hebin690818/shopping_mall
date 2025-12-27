@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Button, Typography, message } from "antd";
+import { Button, Typography, message, Modal, Input } from "antd";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useConnection } from "wagmi";
@@ -16,6 +16,7 @@ import { useMarketContract } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { api, type OrderAPI, type OrderStatusAPI } from "@/lib/api";
 import { getFirstImageUrl } from "@/lib/imageUtils";
+import { formatDateTime, formatOrderNumber } from "@/lib/dateUtils";
 import product from "@/assets/product.png";
 
 const { Text, Title } = Typography;
@@ -46,6 +47,13 @@ export type Order = {
   refund_rejection_reason?: string; // 退款拒绝原因
   product_image_url?: string; // 商品图片URL
   product_name?: string; // 商品名称
+  merchant_name?: string; // 商家名称
+  merchant_phone?: string; // 商家电话
+  buyer_name?: string; // 买家姓名
+  buyer_phone?: string; // 买家电话
+  buyer_full_address?: string; // 买家地址
+  return_shipping_company?: string; // 退货物流公司
+  return_tracking_number?: string; // 退货物流单号
 };
 
 // 将API订单状态映射到前端订单状态
@@ -75,7 +83,7 @@ const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
   return {
     id: String(apiOrder.id || ""),
     orderNumber: apiOrder.order_no || `ORD-${apiOrder.id}`,
-    date: apiOrder.created_at?.split("T")[0] || "",
+    date: formatDateTime(apiOrder.created_at),
     status: mapApiStatusToOrderStatus(apiOrder.status),
     apiStatus: apiOrder.status, // 保存原始API状态
     image: apiOrder.image || apiOrder.image_url || product,
@@ -85,7 +93,7 @@ const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
     quantity: apiOrder.amount || 1,
     total: String(apiOrder.total_price || "0"),
     paymentAmount: apiOrder.total_price ? String(apiOrder.total_price) : undefined,
-    logisticsCompany: undefined,
+    logisticsCompany: apiOrder.shipping_company,
     logisticsNumber: undefined,
     shippingTime: apiOrder.shipped_at,
     paymentTime: undefined,
@@ -100,6 +108,13 @@ const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
     refund_rejection_reason: apiOrder.refund_rejection_reason,
     product_image_url: apiOrder.product_image_url,
     product_name: apiOrder.product_name,
+    merchant_name: apiOrder.merchant_name,
+    merchant_phone: apiOrder.merchant_phone,
+    buyer_name: apiOrder.buyer_name,
+    buyer_phone: apiOrder.buyer_phone,
+    buyer_full_address: apiOrder.buyer_full_address,
+    return_shipping_company: apiOrder.return_shipping_company,
+    return_tracking_number: apiOrder.return_tracking_number,
   };
 };
 
@@ -122,6 +137,12 @@ export default function OrdersPage() {
   const [ordersTotal, setOrdersTotal] = useState<number>(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  
+  // 退款申请弹窗相关状态
+  const [refundModalVisible, setRefundModalVisible] = useState(false);
+  const [currentRefundOrder, setCurrentRefundOrder] = useState<Order | null>(null);
+  const [returnShippingCompany, setReturnShippingCompany] = useState("");
+  const [returnTrackingNumber, setReturnTrackingNumber] = useState("");
 
   // 监听滚动，为固定头部添加背景色
   useEffect(() => {
@@ -431,33 +452,55 @@ export default function OrdersPage() {
     return true;
   });
 
-  // 处理申请退款
-  const handleApplyRefund = async (order: Order) => {
-    if (processingOrderId === order.id) {
-      return;
-    }
-
+  // 处理申请退款（打开弹窗）
+  const handleApplyRefund = (order: Order) => {
     // 检查订单状态，只有在 shipped 状态下才能申请退款
     if (order.apiStatus !== "shipped") {
-      message.warning(
-        t("messages.refundNotAllowed")
-      );
+      message.warning(t("messages.refundNotAllowed"));
       return;
     }
 
-    setProcessingOrderId(order.id);
+    // 设置当前订单并打开弹窗
+    setCurrentRefundOrder(order);
+    setReturnShippingCompany("");
+    setReturnTrackingNumber("");
+    setRefundModalVisible(true);
+  };
+
+  // 提交退款申请
+  const handleSubmitRefund = async () => {
+    if (!currentRefundOrder) {
+      return;
+    }
+
+    if (processingOrderId === currentRefundOrder.id) {
+      return;
+    }
+
+    setProcessingOrderId(currentRefundOrder.id);
 
     try {
       showLoading(t("loading.processingRefund"));
-      const orderId = Number(order.id);
+      const orderId = Number(currentRefundOrder.id);
       if (isNaN(orderId)) {
         throw new Error(t("messages.invalidOrderId"));
       }
 
-      await api.applyRefund(orderId);
+      await api.applyRefund({
+        order_id: orderId,
+        return_shipping_company: returnShippingCompany.trim() || undefined,
+        return_tracking_number: returnTrackingNumber.trim() || undefined,
+      });
+      
       hideLoading();
       setProcessingOrderId(null);
       message.success(t("messages.refundApplySuccess"));
+      
+      // 关闭弹窗
+      setRefundModalVisible(false);
+      setCurrentRefundOrder(null);
+      setReturnShippingCompany("");
+      setReturnTrackingNumber("");
 
       // 重新加载订单列表（强制刷新，清除缓存）
       let refreshStatus: OrderStatusAPI | undefined;
@@ -688,7 +731,7 @@ export default function OrdersPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <Text className="text-xs text-slate-500 block">
-                          {t("ordersCenter.orderNo", { no: order.orderNumber })}
+                          {t("ordersCenter.orderNo", { no: formatOrderNumber(order.orderNumber) })}
                         </Text>
                         {order.date && (
                           <Text className="text-xs text-slate-400 block mt-1">
@@ -805,6 +848,118 @@ export default function OrdersPage() {
           )}
         </div>
       </div>
+
+      {/* 退款申请弹窗 */}
+      <Modal
+        open={refundModalVisible}
+        onCancel={() => {
+          setRefundModalVisible(false);
+          setCurrentRefundOrder(null);
+          setReturnShippingCompany("");
+          setReturnTrackingNumber("");
+        }}
+        footer={null}
+        className="refund-modal"
+        width="90%"
+        style={{ maxWidth: "400px" }}
+        centered
+      >
+        {currentRefundOrder && (
+          <div className="space-y-4">
+            <Title level={5} className="!mb-4">
+              {t("ordersCenter.refundModal.title")}
+            </Title>
+
+            {/* 商品信息 */}
+            <div>
+              <Text className="text-sm font-medium text-slate-900 block mb-2">
+                {t("ordersCenter.refundModal.productInfo")}
+              </Text>
+              <div className="flex gap-3 bg-slate-50 rounded-lg p-3">
+                <img
+                  src={getFirstImageUrl(
+                    currentRefundOrder.product_image_url ||
+                      currentRefundOrder.image
+                  )}
+                  alt={currentRefundOrder.product_name || currentRefundOrder.name}
+                  className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                />
+                <div className="flex-1 min-w-0">
+                  <Text className="text-sm font-medium block mb-1">
+                    {currentRefundOrder.product_name || currentRefundOrder.name}
+                  </Text>
+                  <Text className="text-xs text-slate-500 block mb-1">
+                    {currentRefundOrder.store}
+                  </Text>
+                  <div className="flex items-center justify-between">
+                    <Text className="text-base font-semibold text-slate-900">
+                      ${currentRefundOrder.price}
+                    </Text>
+                    <Text className="text-xs text-slate-500">
+                      x{currentRefundOrder.quantity}
+                    </Text>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 退货物流公司 */}
+            <div>
+              <Text className="text-sm font-medium text-slate-900 block mb-2">
+                {t("ordersCenter.refundModal.returnShippingCompany")}
+              </Text>
+              <Input
+                placeholder={t("ordersCenter.refundModal.returnShippingCompanyPlaceholder")}
+                value={returnShippingCompany}
+                onChange={(e) => setReturnShippingCompany(e.target.value)}
+                className="!rounded-lg"
+              />
+            </div>
+
+            {/* 退货物流单号 */}
+            <div>
+              <Text className="text-sm font-medium text-slate-900 block mb-2">
+                {t("ordersCenter.refundModal.returnTrackingNumber")}
+              </Text>
+              <Input
+                placeholder={t("ordersCenter.refundModal.returnTrackingNumberPlaceholder")}
+                value={returnTrackingNumber}
+                onChange={(e) => setReturnTrackingNumber(e.target.value)}
+                className="!rounded-lg"
+              />
+            </div>
+
+            {/* 按钮 */}
+            <div className="flex gap-3 pt-2">
+              <Button
+                block
+                shape="round"
+                className="!bg-white !border-slate-300 !text-slate-600 h-11"
+                onClick={() => {
+                  setRefundModalVisible(false);
+                  setCurrentRefundOrder(null);
+                  setReturnShippingCompany("");
+                  setReturnTrackingNumber("");
+                }}
+                disabled={processingOrderId === currentRefundOrder.id}
+              >
+                {t("ordersCenter.refundModal.cancel")}
+              </Button>
+              <Button
+                type="primary"
+                block
+                shape="round"
+                className="!bg-slate-900 !border-slate-900 h-11"
+                onClick={handleSubmitRefund}
+                loading={processingOrderId === currentRefundOrder.id}
+                disabled={processingOrderId !== null}
+              >
+                {t("ordersCenter.refundModal.submit")}
+              </Button>
+            </div>
+          </div>
+        )}
+      </Modal>
     </div>
   );
 }

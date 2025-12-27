@@ -3,6 +3,7 @@ import { message } from "antd";
 import { useTranslation } from "react-i18next";
 import { api, type OrderStatusAPI, type OrdersResponse } from "@/lib/api";
 import { type Order, type OrderStatus } from "@/pages/orders";
+import { formatDateTime } from "@/lib/dateUtils";
 import productImage from "@/assets/product.png";
 
 // 将API订单状态映射到前端订单状态
@@ -32,7 +33,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
   return {
     id: String(apiOrder.id || ""),
     orderNumber: apiOrder.order_no || `ORD-${apiOrder.id}`,
-    date: apiOrder.created_at?.split("T")[0] || "",
+    date: formatDateTime(apiOrder.created_at),
     status: mapApiStatusToOrderStatus(apiOrder.status),
     apiStatus: apiOrder.status,
     image: apiOrder.image || apiOrder.image_url || productImage,
@@ -42,7 +43,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     quantity: apiOrder.amount || 1,
     total: String(apiOrder.total_price || "0"),
     paymentAmount: apiOrder.total_price ? String(apiOrder.total_price) : undefined,
-    logisticsCompany: undefined,
+    logisticsCompany: apiOrder.shipping_company,
     logisticsNumber: undefined,
     shippingTime: apiOrder.shipped_at,
     paymentTime: undefined,
@@ -57,6 +58,13 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     refund_rejection_reason: apiOrder.refund_rejection_reason,
     product_image_url: apiOrder.product_image_url,
     product_name: apiOrder.product_name,
+    merchant_name: apiOrder.merchant_name,
+    merchant_phone: apiOrder.merchant_phone,
+    buyer_name: apiOrder.buyer_name,
+    buyer_phone: apiOrder.buyer_phone,
+    buyer_full_address: apiOrder.buyer_full_address,
+    return_shipping_company: apiOrder.return_shipping_company,
+    return_tracking_number: apiOrder.return_tracking_number,
   };
 };
 

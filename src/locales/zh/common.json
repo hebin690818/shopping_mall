@@ -146,7 +146,8 @@
     "createFailed": "创建失败，请重试",
     "updateSuccess": "更新成功",
     "updateFailed": "更新失败，请重试",
-    "merchantAddressIsSelf": "不能购买自己的商品"
+    "merchantAddressIsSelf": "不能购买自己的商品",
+    "shippingAddressRequired": "请先添加收货地址"
   },
   "loading": {
     "confirmingReceipt": "正在确认收货...",
@@ -179,7 +180,7 @@
     "tip": "提交后将进入审核流程，预计1-3个工作日完成"
   },
   "orderDetail": {
-    "title": "订单详情",
+    "title": "商家订单",
     "orderNotFound": "订单不存在",
     "orderNo": "订单号: {{no}}",
     "confirmReceipt": "确认收货",
@@ -194,6 +195,11 @@
     "shipTime": "发货时间",
     "payTime": "付款时间",
     "updateTime": "更新时间",
+    "merchantName": "商家名称",
+    "merchantPhone": "商家电话",
+    "buyerName": "买家姓名",
+    "buyerPhone": "买家电话",
+    "buyerAddress": "买家地址",
     "refundRejectionReason": "退款拒绝原因",
     "confirmRefundMessage": "确定要退款给买家吗？此操作不可撤销。",
     "confirmRejectRefundMessage": "确定要拒绝退款吗？此操作不可撤销。"
@@ -206,7 +212,8 @@
     "currentlySelected": "当前选中",
     "copyOrderNumber": "复制订单号",
     "copyAddress": "复制地址",
-    "deleteImage": "删除图片"
+    "deleteImage": "删除图片",
+    "copyTrackingNumber": "复制"
   },
   "globalLoading": {
     "defaultMessage": "正在加载...",
@@ -346,7 +353,7 @@
     "cancelOrder": "取消订单",
     "payNow": "立即付款",
     "noOrders": "暂无订单",
-    "uploadLogisticsTitle": "上传快递运单号",
+    "uploadLogisticsTitle": "快递信息",
     "waybillPlaceholder": "请在这里输入运单号",
     "companyPlaceholder": "请在这里输入快递公司",
     "upload": "上传",
@@ -368,6 +375,16 @@
       "refundRequested": "退款申请中",
       "refunded": "已退款",
       "refundRejected": "退款已拒绝"
+    },
+    "refundModal": {
+      "title": "申请退款",
+      "productInfo": "商品信息",
+      "returnShippingCompany": "退货物流公司",
+      "returnShippingCompanyPlaceholder": "请输入退货物流公司",
+      "returnTrackingNumber": "退货物流单号",
+      "returnTrackingNumberPlaceholder": "请输入退货物流单号",
+      "submit": "提交申请",
+      "cancel": "取消"
     }
   },
   "checkout": {

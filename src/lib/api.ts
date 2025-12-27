@@ -2,6 +2,8 @@ import { API_BASE_URL } from "./config";
 
 // Token存储键名
 const TOKEN_KEY = "auth_token";
+// 用于标记token变化的键名（用于跨标签页同步）
+const TOKEN_CHANGE_EVENT_KEY = "auth_token_changed";
 
 // 获取存储的token
 export const getToken = (): string | null => {
@@ -9,13 +11,67 @@ export const getToken = (): string | null => {
 };
 
 // 设置token
-export const setToken = (token: string): void => {
+export const setToken = (token: string, skipEvent = false): void => {
   localStorage.setItem(TOKEN_KEY, token);
+  // 触发跨标签页同步事件（如果不是跳过事件的情况）
+  if (!skipEvent) {
+    localStorage.setItem(TOKEN_CHANGE_EVENT_KEY, JSON.stringify({
+      action: 'set',
+      timestamp: Date.now(),
+    }));
+    // 立即删除事件标记，避免重复触发
+    setTimeout(() => {
+      localStorage.removeItem(TOKEN_CHANGE_EVENT_KEY);
+    }, 0);
+  }
 };
 
 // 清除token
-export const removeToken = (): void => {
+export const removeToken = (skipEvent = false): void => {
   localStorage.removeItem(TOKEN_KEY);
+  // 触发跨标签页同步事件（如果不是跳过事件的情况）
+  if (!skipEvent) {
+    localStorage.setItem(TOKEN_CHANGE_EVENT_KEY, JSON.stringify({
+      action: 'remove',
+      timestamp: Date.now(),
+    }));
+    // 立即删除事件标记，避免重复触发
+    setTimeout(() => {
+      localStorage.removeItem(TOKEN_CHANGE_EVENT_KEY);
+    }, 0);
+  }
+};
+
+// 监听token变化的回调类型
+export type TokenChangeCallback = (action: 'set' | 'remove', token: string | null) => void;
+
+// 监听token变化的函数
+export const onTokenChange = (callback: TokenChangeCallback): (() => void) => {
+  const handleStorageChange = (e: StorageEvent) => {
+    // 监听其他标签页的token变化
+    if (e.key === TOKEN_KEY) {
+      const newToken = e.newValue;
+      const action = newToken ? 'set' : 'remove';
+      callback(action, newToken);
+    }
+    // 监听token变化事件标记
+    if (e.key === TOKEN_CHANGE_EVENT_KEY && e.newValue) {
+      try {
+        const eventData = JSON.parse(e.newValue);
+        const currentToken = getToken();
+        callback(eventData.action, currentToken);
+      } catch (error) {
+        console.error('Failed to parse token change event:', error);
+      }
+    }
+  };
+
+  window.addEventListener('storage', handleStorageChange);
+
+  // 返回清理函数
+  return () => {
+    window.removeEventListener('storage', handleStorageChange);
+  };
 };
 
 // 请求缓存和去重管理
@@ -407,6 +463,7 @@ export interface OrderAPI {
   amount?: number;
   total_price?: string | number;
   tracking_number?: string;
+  shipping_company?: string;
   shipped_at?: string;
   order_index?: string | number;
   refund_rejection_reason?: string;
@@ -539,13 +596,28 @@ async function performRequest<T = any>(
 
   // 如果响应状态是 401，清除 token 并抛出错误
   if (response.status === 401) {
-    removeToken();
-    throw new Error(data.message || `API Error: ${response.status}`);
+    // 清除 token（跳过事件，避免重复触发）
+    removeToken(true);
+    
+    // 触发 401 未授权事件，通知应用层处理
+    const unauthorizedEvent = new CustomEvent('auth:unauthorized', {
+      detail: {
+        message: data.message || '登录已过期，请重新登录',
+        url: url,
+      },
+    });
+    window.dispatchEvent(unauthorizedEvent);
+    
+    // 抛出错误
+    const error = new Error(data.message || '登录已过期，请重新登录');
+    (error as any).status = 401;
+    (error as any).code = 'UNAUTHORIZED';
+    throw error;
   }
 
-  // 如果响应包含token，自动保存
+  // 如果响应包含token，自动保存（跳过事件，避免在响应处理时触发）
   if (data.token) {
-    setToken(data.token);
+    setToken(data.token, true);
   }
 
   // 如果token在响应头中
@@ -553,7 +625,7 @@ async function performRequest<T = any>(
     .get("Authorization")
     ?.replace("Bearer ", "");
   if (responseToken) {
-    setToken(responseToken);
+    setToken(responseToken, true);
   }
 
   if (!response.ok) {
@@ -579,11 +651,11 @@ export const api = {
       body: JSON.stringify(params),
     });
 
-    // 如果响应中有token，保存它
+    // 如果响应中有token，保存它（不跳过事件，触发跨标签页同步）
     if (response.token) {
-      setToken(response.token);
+      setToken(response.token, false);
     } else if (response.data?.token) {
-      setToken(response.data.token);
+      setToken(response.data.token, false);
     }
 
     return response.data || (response as LoginResponse);
@@ -1203,10 +1275,14 @@ export const api = {
   },
 
   // 申请退款
-  async applyRefund(orderId: number): Promise<void> {
+  async applyRefund(params: {
+    order_id: number;
+    return_shipping_company?: string;
+    return_tracking_number?: string;
+  }): Promise<void> {
     await request<void>("/shop/api/orders/refund", {
       method: "POST",
-      body: JSON.stringify({ order_id: orderId }),
+      body: JSON.stringify(params),
     });
   },
 
@@ -1237,6 +1313,7 @@ export const api = {
     merchant_address: string;
     order_id: number;
     tracking_number: string;
+    shipping_company: string;
   }): Promise<void> {
     const response = await request<void>("/shop/api/orders/ship", {
       method: "POST",

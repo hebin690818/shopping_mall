@@ -9,6 +9,7 @@ import { useTokenQuery } from "@/hooks/useTokenContract";
 import { useMarketQuery } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { formatTokenAmount } from "@/lib/contractUtils";
+import { copyToClipboard } from "@/lib/clipboardUtils";
 import { CopyOutlined, RightOutlined } from "@ant-design/icons";
 
 const { Text, Title } = Typography;
@@ -38,10 +39,14 @@ export default function ProfilePage() {
     return `${addr.slice(0, 6)}...${addr.slice(-4)}`;
   };
 
-  const handleCopyAddress = () => {
+  const handleCopyAddress = async () => {
     if (address) {
-      navigator.clipboard.writeText(address);
-      message.success(t("profile.copy"));
+      const success = await copyToClipboard(address);
+      if (success) {
+        message.success(t("profile.copy"));
+      } else {
+        message.error(t("messages.copyFailed"));
+      }
     }
   };
 

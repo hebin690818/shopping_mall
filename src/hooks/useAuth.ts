@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import { useConnection, useSignMessage } from 'wagmi';
+import { message } from 'antd';
 import { walletLogin, generateSignMessage } from '@/lib/auth';
-import { getToken, removeToken, apiCache } from '@/lib/api';
+import { getToken, removeToken, apiCache, onTokenChange } from '@/lib/api';
 
 export const useAuth = () => {
   const { isConnected, address } = useConnection();
@@ -16,6 +17,50 @@ export const useAuth = () => {
     const token = getToken();
     setIsAuthenticated(!!token);
     previousAddressRef.current = address;
+  }, []);
+
+  // 监听跨标签页的token变化（多标签页同步）
+  useEffect(() => {
+    const cleanup = onTokenChange((action, token) => {
+      // 当其他标签页设置或删除token时，同步当前标签页的状态
+      if (action === 'set' && token) {
+        setIsAuthenticated(true);
+        // 如果当前钱包已连接且地址匹配，更新认证状态
+        if (isConnected && address) {
+          console.log('其他标签页已登录，同步登录状态');
+        }
+      } else if (action === 'remove') {
+        setIsAuthenticated(false);
+        // 清除登录尝试记录，允许重新登录
+        loginAttemptRef.current = null;
+        console.log('其他标签页已登出，同步登出状态');
+      }
+    });
+
+    return cleanup;
+  }, [isConnected, address]);
+
+  // 监听 401 未授权事件
+  useEffect(() => {
+    const handleUnauthorized = (event: Event) => {
+      const customEvent = event as CustomEvent<{ message: string; url: string }>;
+      const errorMessage = customEvent.detail?.message || '登录已过期，请重新登录';
+      
+      // 清除认证状态
+      setIsAuthenticated(false);
+      loginAttemptRef.current = null;
+      
+      // 显示友好的错误提示
+      message.warning(errorMessage, 3);
+      
+      console.warn('收到 401 未授权错误:', customEvent.detail);
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+    };
   }, []);
 
   // 当钱包连接时，自动进行登录
@@ -33,7 +78,8 @@ export const useAuth = () => {
       // 如果钱包断开连接，清除所有状态
       if (!isConnected) {
         setIsAuthenticated(false);
-        removeToken();
+        // 跳过事件，避免在钱包断开时触发跨标签页同步（这是本地操作）
+        removeToken(true);
         apiCache.clear();
         apiCache.cancelAll();
         loginAttemptRef.current = null;
@@ -48,8 +94,8 @@ export const useAuth = () => {
         apiCache.clear();
         // 取消所有进行中的请求
         apiCache.cancelAll();
-        // 清除旧的token
-        removeToken();
+        // 清除旧的token（跳过事件，这是地址变化导致的本地操作）
+        removeToken(true);
         // 清除认证状态
         setIsAuthenticated(false);
         // 重置登录尝试记录
@@ -135,8 +181,13 @@ export const useAuth = () => {
 
   // 登出函数
   const handleLogout = () => {
-    removeToken();
+    // 不跳过事件，触发跨标签页同步
+    removeToken(false);
     setIsAuthenticated(false);
+    loginAttemptRef.current = null;
+    // 清除API缓存
+    apiCache.clear();
+    apiCache.cancelAll();
   };
 
   return {
