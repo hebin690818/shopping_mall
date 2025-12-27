@@ -153,11 +153,11 @@ export default function ProductDetailPage() {
                   .map((spec, specIndex) => (
                     <div
                       key={specIndex}
-                      className="flex items-center justify-between gap-2"
+                      className="flex items-start flex-col gap-2"
                     >
-                      <Text className="text-sm font-semibold text-slate-800">
+                      <div className="text-sm font-semibold text-slate-800 text-left">
                         {spec.spec_name}:
-                      </Text>
+                      </div>
                       <div className="flex flex-wrap gap-2.5">
                         {spec.options.map((option, optionIndex) => {
                           const isSelected =
