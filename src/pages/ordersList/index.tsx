@@ -227,8 +227,8 @@ export default function OrdersListPage() {
       return;
     }
 
-    // 检查订单索引
-    if (!currentRefundOrder.orderIndex) {
+    // 检查订单索引（orderIndex 可以为 0，不能使用 !orderIndex 判断）
+    if (currentRefundOrder.orderIndex === undefined || currentRefundOrder.orderIndex === null) {
       message.error(t("messages.invalidOrderIndex"));
       return;
     }

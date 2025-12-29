@@ -65,10 +65,9 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     logisticsNumber: undefined,
     shippingTime: apiOrder.shipped_at,
     paymentTime: undefined,
-    orderIndex: apiOrder.order_index
-      ? typeof apiOrder.order_index === "string"
-        ? BigInt(apiOrder.order_index)
-        : BigInt(apiOrder.order_index)
+    // order_index 可以为 0，需要区分 undefined/null 和 0
+    orderIndex: apiOrder.order_index !== undefined && apiOrder.order_index !== null 
+      ? BigInt(apiOrder.order_index) 
       : undefined,
     tracking_number: apiOrder.tracking_number,
     updated_at: apiOrder.updated_at,

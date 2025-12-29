@@ -91,7 +91,7 @@ const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
   // 支持 specs 和 selected_specs 两种字段名
   let specs: SelectedSpecValue[] | string | undefined = undefined;
   const specsData = (apiOrder as any).specs || (apiOrder as any).selected_specs;
-  
+
   if (specsData) {
     if (typeof specsData === "string") {
       try {
@@ -117,16 +117,18 @@ const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
     price: String(apiOrder.price || "0"),
     quantity: apiOrder.amount || 1,
     total: String(apiOrder.total_price || "0"),
-    paymentAmount: apiOrder.total_price ? String(apiOrder.total_price) : undefined,
+    paymentAmount: apiOrder.total_price
+      ? String(apiOrder.total_price)
+      : undefined,
     logisticsCompany: apiOrder.shipping_company,
     logisticsNumber: undefined,
     shippingTime: apiOrder.shipped_at,
     paymentTime: undefined,
-    orderIndex: apiOrder.order_index
-      ? typeof apiOrder.order_index === "string"
+    // order_index 可以为 0，需要区分 undefined/null 和 0
+    orderIndex:
+      apiOrder.order_index !== undefined && apiOrder.order_index !== null
         ? BigInt(apiOrder.order_index)
-        : BigInt(apiOrder.order_index)
-      : undefined,
+        : undefined,
     tracking_number: apiOrder.tracking_number,
     updated_at: apiOrder.updated_at,
     created_at: apiOrder.created_at,
@@ -163,10 +165,12 @@ export default function OrdersPage() {
   const [ordersTotal, setOrdersTotal] = useState<number>(0);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-  
+
   // 退款申请弹窗相关状态
   const [refundModalVisible, setRefundModalVisible] = useState(false);
-  const [currentRefundOrder, setCurrentRefundOrder] = useState<Order | null>(null);
+  const [currentRefundOrder, setCurrentRefundOrder] = useState<Order | null>(
+    null
+  );
   const [returnShippingCompany, setReturnShippingCompany] = useState("");
   const [returnTrackingNumber, setReturnTrackingNumber] = useState("");
 
@@ -196,7 +200,7 @@ export default function OrdersPage() {
       // 根据当前选中的标签确定状态筛选
       let status: OrderStatusAPI | undefined;
       let statuses: OrderStatusAPI[] | undefined;
-      
+
       if (activeTab === "pending") {
         status = "pending";
       } else if (activeTab === "delivering") {
@@ -294,7 +298,7 @@ export default function OrdersPage() {
       // 根据当前选中的标签确定状态筛选
       let status: OrderStatusAPI | undefined;
       let statuses: OrderStatusAPI[] | undefined;
-      
+
       if (activeTab === "pending") {
         status = "pending";
       } else if (activeTab === "delivering") {
@@ -367,9 +371,13 @@ export default function OrdersPage() {
   useEffect(() => {
     const state = location.state as { refresh?: boolean } | null;
     // 使用 location.key 来唯一标识每次导航，避免重复处理
-    const locationKey = location.key || 'default';
-    
-    if (state?.refresh && address && refreshProcessedRef.current !== locationKey) {
+    const locationKey = location.key || "default";
+
+    if (
+      state?.refresh &&
+      address &&
+      refreshProcessedRef.current !== locationKey
+    ) {
       refreshProcessedRef.current = locationKey;
       // 重置分页状态
       setCurrentPage(1);
@@ -517,11 +525,11 @@ export default function OrdersPage() {
         return_shipping_company: returnShippingCompany.trim() || undefined,
         return_tracking_number: returnTrackingNumber.trim() || undefined,
       });
-      
+
       hideLoading();
       setProcessingOrderId(null);
       message.success(t("messages.refundApplySuccess"));
-      
+
       // 关闭弹窗
       setRefundModalVisible(false);
       setCurrentRefundOrder(null);
@@ -531,7 +539,7 @@ export default function OrdersPage() {
       // 重新加载订单列表（强制刷新，清除缓存）
       let refreshStatus: OrderStatusAPI | undefined;
       let refreshStatuses: OrderStatusAPI[] | undefined;
-      
+
       if (activeTab === "pending") {
         refreshStatus = "pending";
       } else if (activeTab === "delivering") {
@@ -541,7 +549,7 @@ export default function OrdersPage() {
       } else if (activeTab === "refund") {
         refreshStatuses = ["refund_requested", "refunded", "refund_rejected"];
       }
-      
+
       await api
         .getBuyerOrders({
           page: 1,
@@ -559,9 +567,7 @@ export default function OrdersPage() {
       console.error("申请退款失败:", error);
       hideLoading();
       setProcessingOrderId(null);
-      const errorMessage =
-        error?.message ||
-        t("messages.refundApplyFailed");
+      const errorMessage = error?.message || t("messages.refundApplyFailed");
       message.error(errorMessage);
     }
   };
@@ -577,18 +583,14 @@ export default function OrdersPage() {
       return;
     }
 
-    // 尝试从订单获取 orderIndex
-    // 如果订单有 orderIndex，直接使用；否则尝试将 id 转换为 orderIndex
-    let orderIndex: bigint | null = null;
-
-    if (order.orderIndex) {
-      orderIndex = order.orderIndex;
-    } else if (order.id && !isNaN(Number(order.id))) {
-      orderIndex = BigInt(order.id);
-    } else {
+    // order_index 可以为 0，不能使用 id 作为 orderIndex
+    // 订单索引和订单ID是不同的概念，订单索引是合约中订单数组的索引（从0开始）
+    if (order.orderIndex === undefined || order.orderIndex === null) {
       message.error(t("messages.invalidOrderIndex"));
       return;
     }
+
+    const orderIndex = order.orderIndex;
 
     setProcessingOrderId(order.id);
 
@@ -601,13 +603,13 @@ export default function OrdersPage() {
         hideLoading();
         setProcessingOrderId(null);
         message.success(t("messages.confirmSuccess"));
-        
+
         // 等待后端同步合约状态，然后多次刷新确保数据已更新
         const refreshOrders = async () => {
           // 根据当前选中的标签确定状态筛选
           let status: OrderStatusAPI | undefined;
           let statuses: OrderStatusAPI[] | undefined;
-          
+
           if (activeTab === "pending") {
             status = "pending";
           } else if (activeTab === "delivering") {
@@ -633,18 +635,10 @@ export default function OrdersPage() {
           setOrdersTotal(response.total || 0);
         };
 
-        // 立即刷新一次（可能数据还没更新）
-        await refreshOrders();
-
-        // 延迟2秒后刷新，给后端时间同步合约状态
-        setTimeout(async () => {
-          await refreshOrders();
-        }, 2000);
-
         // 再次延迟刷新，确保数据已同步
         setTimeout(async () => {
           await refreshOrders();
-        }, 5000);
+        }, 2000);
       } else {
         throw new Error(t("messages.transactionFailed"));
       }
@@ -757,7 +751,9 @@ export default function OrdersPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <Text className="text-xs text-slate-500 block">
-                          {t("ordersCenter.orderNo", { no: formatOrderNumber(order.orderNumber) })}
+                          {t("ordersCenter.orderNo", {
+                            no: formatOrderNumber(order.orderNumber),
+                          })}
                         </Text>
                         {order.date && (
                           <Text className="text-xs text-slate-400 block mt-1">
@@ -786,7 +782,9 @@ export default function OrdersPage() {
                             if (typeof order.specs === "string") {
                               try {
                                 const parsed = JSON.parse(order.specs);
-                                specsArray = Array.isArray(parsed) ? parsed : [];
+                                specsArray = Array.isArray(parsed)
+                                  ? parsed
+                                  : [];
                               } catch {
                                 // 解析失败，忽略
                               }
@@ -801,14 +799,18 @@ export default function OrdersPage() {
                                   key={index}
                                   className="text-xs text-slate-500 flex items-center gap-1"
                                 >
-                                  <span className="text-slate-400">{spec.spec_name}:</span>
-                                  <span className="text-slate-600">{spec.option_value}</span>
+                                  <span className="text-slate-400">
+                                    {spec.spec_name}:
+                                  </span>
+                                  <span className="text-slate-600">
+                                    {spec.option_value}
+                                  </span>
                                 </div>
                               ))}
                             </div>
                           ) : null;
                         })()}
-                        
+
                         <div className="flex items-center justify-between">
                           <Text className="text-base font-semibold text-slate-900">
                             ${order.price}
@@ -845,7 +847,7 @@ export default function OrdersPage() {
                       >
                         {t("ordersCenter.viewDetails")}
                       </Button>
-                      
+
                       {/* 申请退款：仅在 shipped 状态时显示 */}
                       {order.apiStatus === "shipped" && (
                         <Button
@@ -860,7 +862,7 @@ export default function OrdersPage() {
                           {t("ordersCenter.applyRefund")}
                         </Button>
                       )}
-                      
+
                       {/* 确认收货：仅在 shipped 状态时显示 */}
                       {order.apiStatus === "shipped" && (
                         <Button
@@ -934,7 +936,9 @@ export default function OrdersPage() {
                     currentRefundOrder.product_image_url ||
                       currentRefundOrder.image
                   )}
-                  alt={currentRefundOrder.product_name || currentRefundOrder.name}
+                  alt={
+                    currentRefundOrder.product_name || currentRefundOrder.name
+                  }
                   className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                 />
                 <div className="flex-1 min-w-0">
@@ -962,7 +966,9 @@ export default function OrdersPage() {
                 {t("ordersCenter.refundModal.returnShippingCompany")}
               </Text>
               <Input
-                placeholder={t("ordersCenter.refundModal.returnShippingCompanyPlaceholder")}
+                placeholder={t(
+                  "ordersCenter.refundModal.returnShippingCompanyPlaceholder"
+                )}
                 value={returnShippingCompany}
                 onChange={(e) => setReturnShippingCompany(e.target.value)}
                 className="!rounded-lg"
@@ -975,7 +981,9 @@ export default function OrdersPage() {
                 {t("ordersCenter.refundModal.returnTrackingNumber")}
               </Text>
               <Input
-                placeholder={t("ordersCenter.refundModal.returnTrackingNumberPlaceholder")}
+                placeholder={t(
+                  "ordersCenter.refundModal.returnTrackingNumberPlaceholder"
+                )}
                 value={returnTrackingNumber}
                 onChange={(e) => setReturnTrackingNumber(e.target.value)}
                 className="!rounded-lg"

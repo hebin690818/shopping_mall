@@ -101,7 +101,7 @@ export default function OrderDetailPage() {
   // 注意：只有在有有效的 orderIndex 时才查询合约，避免使用错误的索引值
   const { data: contractOrder } = useOrderDetails(
     orderIndex ?? 0n,
-    !!orderIndex
+    orderIndex != null
   ) as {
     data?: {
       orderId: bigint;
@@ -133,7 +133,7 @@ export default function OrderDetailPage() {
     ? {
         ...stateOrder,
         // 如果 stateOrder 有 orderIndex，尝试获取合约数据以补充 contractOrder 信息
-        ...(orderIndex && contractOrder
+        ...(orderIndex != null && contractOrder
           ? {
               contractOrder: {
                 orderId: contractOrder.orderId,
@@ -208,7 +208,7 @@ export default function OrderDetailPage() {
     }
 
     // 验证订单索引和合约订单数据是否存在
-    if (!orderIndex) {
+    if (orderIndex == null) {
       message.error(
         t("messages.invalidOrderIndex") || "订单索引无效，无法执行合约操作"
       );
@@ -235,11 +235,13 @@ export default function OrderDetailPage() {
         setIsProcessing(false);
         message.success(t("messages.confirmSuccess"));
 
-        // 导航回订单列表并传递刷新标志
-        navigate(ROUTES.ORDERS, {
-          state: { refresh: true },
-          replace: false,
-        });
+        // 延迟2秒后刷新数据并导航回订单列表
+        setTimeout(() => {
+          navigate(ROUTES.ORDERS, {
+            state: { refresh: true },
+            replace: false,
+          });
+        }, 2000);
       } else {
         throw new Error(t("messages.transactionFailed"));
       }
@@ -276,7 +278,7 @@ export default function OrderDetailPage() {
     }
 
     // 验证订单索引和合约订单数据是否存在
-    if (!orderIndex) {
+    if (orderIndex == null) {
       message.error(
         t("messages.invalidOrderIndex") || "订单索引无效，无法执行合约操作"
       );
@@ -340,7 +342,7 @@ export default function OrderDetailPage() {
     }
 
     // 验证订单索引和合约订单数据是否存在
-    if (!orderIndex || !order.contractOrder) {
+    if (orderIndex == null || !order.contractOrder) {
       message.error(
         t("messages.invalidOrderIndex") ||
           "订单索引无效或合约订单不存在，无法执行退款"
@@ -719,7 +721,7 @@ export default function OrderDetailPage() {
         </div>
 
         {/* 操作按钮区域 - 只有在有有效的订单索引和合约订单数据时才显示 */}
-        {stateOrder?.orderIndex && order.contractOrder && (
+        {stateOrder?.orderIndex != null && order.contractOrder && (
           <div className="mt-4 px-4 space-y-3">
             {/* 买家确认收货按钮 - 仅当订单状态为 shipped 时显示 */}
             {order.apiStatus === "shipped" &&
