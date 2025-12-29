@@ -56,13 +56,15 @@ export const useMarketContract = () => {
    * @param amount 购买数量
    * @param price 商品单价（wei）
    * @param orderId 后端生成的订单ID
+   * @param specs 商品规格（JSON字符串格式，如：[{"spec_name":"颜色","option_value":"红色"},{"spec_name":"尺寸","option_value":"XL"}]）
    * @returns 交易收据
    */
   const createOrder = async (
     merchant: Address,
     amount: bigint,
     price: bigint,
-    orderId: bigint
+    orderId: bigint,
+    specs: string = "[]"
   ): Promise<TransactionReceipt> => {
     if (!address) {
       throw new Error('钱包未连接');
@@ -77,7 +79,7 @@ export const useMarketContract = () => {
       address: MARKET_CONTRACT_ADDRESS,
       abi: marketAbi,
       functionName: 'createOrder',
-      args: [merchant, amount, price, orderId],
+      args: [merchant, amount, price, orderId, specs],
     });
 
     // 2. 写入合约

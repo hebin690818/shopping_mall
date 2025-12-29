@@ -1,6 +1,6 @@
 // Reward合约地址
 export const REWARD_CONTRACT_ADDRESS =
-  "0x4c131b0b0be35e1f356ed2c0842db31bc08364a6" as const;
+  "0x9020fbc91e75e79e5aebcee8418089fc935894f7" as const;
 
 export const rewardAbi = [
   {
@@ -8,6 +8,21 @@ export const rewardAbi = [
       {
         internalType: "address",
         name: "_rewardToken",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_pancakeRouter",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_wbnb",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_usdt",
         type: "address",
       },
     ],
@@ -93,6 +108,24 @@ export const rewardAbi = [
         name: "powerDeducted",
         type: "uint256",
       },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "userReward",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "burnAmount",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "platformAmount",
+        type: "uint256",
+      },
     ],
     name: "RewardClaimed",
     type: "event",
@@ -173,6 +206,38 @@ export const rewardAbi = [
     type: "event",
   },
   {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "oldRouter",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newRouter",
+        type: "address",
+      },
+    ],
+    name: "RouterUpdated",
+    type: "event",
+  },
+  {
+    inputs: [],
+    name: "BURN_ADDRESS",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "DEFAULT_ADMIN_ROLE",
     outputs: [
@@ -200,12 +265,51 @@ export const rewardAbi = [
   },
   {
     inputs: [],
+    name: "PLATFORM_SHARE",
+    outputs: [
+      {
+        internalType: "uint8",
+        name: "",
+        type: "uint8",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
     name: "PRECISION",
     outputs: [
       {
         internalType: "uint256",
         name: "",
         type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "TOTAL_POOL_SHARE",
+    outputs: [
+      {
+        internalType: "uint8",
+        name: "",
+        type: "uint8",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "USER_SHARE",
+    outputs: [
+      {
+        internalType: "uint8",
+        name: "",
+        type: "uint8",
       },
     ],
     stateMutability: "view",
@@ -256,10 +360,48 @@ export const rewardAbi = [
     type: "function",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "bnbAmount",
+        type: "uint256",
+      },
+    ],
+    name: "bnbToUsdt",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [],
     name: "claim",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "dreamAmount",
+        type: "uint256",
+      },
+    ],
+    name: "dreamToPower",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -324,6 +466,19 @@ export const rewardAbi = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "pancakeRouter",
+    outputs: [
+      {
+        internalType: "contract IPancakeRouter",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       {
         internalType: "address",
@@ -332,6 +487,25 @@ export const rewardAbi = [
       },
     ],
     name: "pendingReward",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "usdtPower",
+        type: "uint256",
+      },
+    ],
+    name: "powerToDream",
     outputs: [
       {
         internalType: "uint256",
@@ -383,12 +557,25 @@ export const rewardAbi = [
     name: "rewardToken",
     outputs: [
       {
-        internalType: "contract IERC20",
+        internalType: "contract IDreamToken",
         name: "",
         type: "address",
       },
     ],
     stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_pancakeRouter",
+        type: "address",
+      },
+    ],
+    name: "setRouter",
+    outputs: [],
+    stateMutability: "nonpayable",
     type: "function",
   },
   {
@@ -413,6 +600,38 @@ export const rewardAbi = [
   {
     inputs: [],
     name: "totalPower",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "usdt",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "usdtAmount",
+        type: "uint256",
+      },
+    ],
+    name: "usdtToBnb",
     outputs: [
       {
         internalType: "uint256",
@@ -460,5 +679,22 @@ export const rewardAbi = [
     ],
     stateMutability: "view",
     type: "function",
+  },
+  {
+    inputs: [],
+    name: "wbnb",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    stateMutability: "payable",
+    type: "receive",
   },
 ];

@@ -1,6 +1,6 @@
 // Market合约地址
 export const MARKET_CONTRACT_ADDRESS =
-  "0xb3fd90c92bb2e954da0edbd8be19c064b2c663f9" as const;
+  "0x298e547edabc909c3566521f7901c6c26dc56122" as const;
 
 export const marketAbi = [
   {
@@ -13,6 +13,16 @@ export const marketAbi = [
       {
         internalType: "address",
         name: "_receiver",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_dreamPool",
+        type: "address",
+      },
+      {
+        internalType: "address",
+        name: "_rewardPool",
         type: "address",
       },
     ],
@@ -73,6 +83,37 @@ export const marketAbi = [
       {
         indexed: true,
         internalType: "address",
+        name: "community",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "level",
+        type: "uint256",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+    ],
+    name: "CommunityReward",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
         name: "oldPool",
         type: "address",
       },
@@ -84,6 +125,25 @@ export const marketAbi = [
       },
     ],
     name: "DreamPoolUpdated",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
+        indexed: true,
+        internalType: "address",
+        name: "oldGame",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "newGame",
+        type: "address",
+      },
+    ],
+    name: "GameContractUpdated",
     type: "event",
   },
   {
@@ -193,6 +253,12 @@ export const marketAbi = [
         name: "totalAmount",
         type: "uint256",
       },
+      {
+        indexed: false,
+        internalType: "string",
+        name: "specs",
+        type: "string",
+      },
     ],
     name: "OrderCreated",
     type: "event",
@@ -265,6 +331,31 @@ export const marketAbi = [
     anonymous: false,
     inputs: [
       {
+        indexed: true,
+        internalType: "address",
+        name: "referrer",
+        type: "address",
+      },
+      {
+        indexed: true,
+        internalType: "address",
+        name: "buyer",
+        type: "address",
+      },
+      {
+        indexed: false,
+        internalType: "uint256",
+        name: "amount",
+        type: "uint256",
+      },
+    ],
+    name: "ReferrerReward",
+    type: "event",
+  },
+  {
+    anonymous: false,
+    inputs: [
+      {
         indexed: false,
         internalType: "address",
         name: "account",
@@ -322,6 +413,11 @@ export const marketAbi = [
         name: "orderId",
         type: "uint256",
       },
+      {
+        internalType: "string",
+        name: "specs",
+        type: "string",
+      },
     ],
     name: "createOrder",
     outputs: [],
@@ -357,6 +453,19 @@ export const marketAbi = [
     name: "emergencyWithdraw",
     outputs: [],
     stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "gameContract",
+    outputs: [
+      {
+        internalType: "contract IGame",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
     type: "function",
   },
   {
@@ -669,6 +778,19 @@ export const marketAbi = [
     type: "function",
   },
   {
+    inputs: [],
+    name: "rewardPool",
+    outputs: [
+      {
+        internalType: "address",
+        name: "",
+        type: "address",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
     inputs: [
       {
         internalType: "address",
@@ -677,6 +799,19 @@ export const marketAbi = [
       },
     ],
     name: "setDreamPool",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "address",
+        name: "_gameContract",
+        type: "address",
+      },
+    ],
+    name: "setGameContract",
     outputs: [],
     stateMutability: "nonpayable",
     type: "function",

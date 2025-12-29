@@ -17,6 +17,12 @@ import { api, type Product, type Address } from "@/lib/api";
 
 const { Title, Text } = Typography;
 
+// 选择的规格值类型
+interface SelectedSpecValue {
+  spec_name: string;
+  option_value: string;
+}
+
 export default function OrderConfirmPage() {
   const { productId } = useParams<{ productId: string }>();
   const navigate = useNavigate();
@@ -32,6 +38,11 @@ export default function OrderConfirmPage() {
   const { approve } = useTokenContract();
   const { useAllowance } = useTokenQuery();
   const { data: allowance } = useAllowance(address, MARKET_CONTRACT_ADDRESS);
+
+  // 从上一页传递的 state 中获取选择的规格
+  const selectedSpecs: SelectedSpecValue[] =
+    (location.state as { selectedSpecs?: SelectedSpecValue[] })?.selectedSpecs ||
+    [];
 
   useEffect(() => {
     const handleScroll = () => {
@@ -184,11 +195,14 @@ export default function OrderConfirmPage() {
 
       // 2. 创建订单，等待交易确认
       showLoading(t("loading.creatingOrder"));
+      // 将规格数组转换为JSON字符串传递给合约
+      const specsJson = JSON.stringify(selectedSpecs);
       const receipt = await createOrder(
         merchantAddress as `0x${string}`,
         BigInt(quantity),
         priceWei,
-        orderId
+        orderId,
+        specsJson
       );
 
       // 检查交易状态
@@ -359,7 +373,21 @@ export default function OrderConfirmPage() {
                 <div className="font-semibold text-slate-900 line-clamp-2">
                   {displayProduct.name}
                 </div>
-                <div className="text-lg font-semibold text-slate-900">
+                {/* 展示选择的规格 */}
+                {selectedSpecs.length > 0 && (
+                  <div className="mt-1 space-y-1">
+                    {selectedSpecs.map((spec, index) => (
+                      <div
+                        key={index}
+                        className="text-xs text-slate-500 flex items-center gap-1"
+                      >
+                        <span className="text-slate-400">{spec.spec_name}:</span>
+                        <span className="text-slate-600">{spec.option_value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <div className="text-lg font-semibold text-slate-900 mt-1">
                   {formattedUnitPrice}
                 </div>
               </div>

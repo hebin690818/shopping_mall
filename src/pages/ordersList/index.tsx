@@ -515,6 +515,40 @@ export default function OrdersListPage() {
                           <Text className="text-sm font-medium block mb-1 truncate">
                             {order.product_name || order.name}
                           </Text>
+                          {/* 展示订单规格 */}
+                          {(() => {
+                            // SelectedSpecValue 类型定义
+                            interface SelectedSpecValue {
+                              spec_name: string;
+                              option_value: string;
+                            }
+                            let specsArray: SelectedSpecValue[] = [];
+                            if (order.specs) {
+                              if (typeof order.specs === "string") {
+                                try {
+                                  const parsed = JSON.parse(order.specs);
+                                  specsArray = Array.isArray(parsed) ? parsed : [];
+                                } catch {
+                                  // 解析失败，忽略
+                                }
+                              } else if (Array.isArray(order.specs)) {
+                                specsArray = order.specs;
+                              }
+                            }
+                            return specsArray.length > 0 ? (
+                              <div className="mt-1 space-y-0.5 mb-1">
+                                {specsArray.map((spec, index) => (
+                                  <div
+                                    key={index}
+                                    className="text-xs text-slate-500 flex items-center gap-1"
+                                  >
+                                    <span className="text-slate-400">{spec.spec_name}:</span>
+                                    <span className="text-slate-600">{spec.option_value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : null;
+                          })()}
                           {/* <Text className="text-xs text-slate-500 block mb-1">
                             {order.store}
                           </Text> */}

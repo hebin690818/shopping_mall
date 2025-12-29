@@ -30,6 +30,24 @@ const mapApiStatusToOrderStatus = (apiStatus: OrderStatusAPI): OrderStatus => {
 
 // 将API订单数据转换为前端订单格式
 const mapApiOrderToOrder = (apiOrder: any): Order => {
+  // 处理规格信息：可能是字符串（JSON）或数组
+  // 支持 specs 和 selected_specs 两种字段名
+  let specs: any = undefined;
+  const specsData = apiOrder.specs || apiOrder.selected_specs;
+  
+  if (specsData) {
+    if (typeof specsData === "string") {
+      try {
+        const parsed = JSON.parse(specsData);
+        specs = Array.isArray(parsed) ? parsed : specsData;
+      } catch {
+        specs = specsData;
+      }
+    } else if (Array.isArray(specsData)) {
+      specs = specsData;
+    }
+  }
+
   return {
     id: String(apiOrder.id || ""),
     orderNumber: apiOrder.order_no || `ORD-${apiOrder.id}`,
@@ -65,6 +83,7 @@ const mapApiOrderToOrder = (apiOrder: any): Order => {
     buyer_full_address: apiOrder.buyer_full_address,
     return_shipping_company: apiOrder.return_shipping_company,
     return_tracking_number: apiOrder.return_tracking_number,
+    specs,
   };
 };
 

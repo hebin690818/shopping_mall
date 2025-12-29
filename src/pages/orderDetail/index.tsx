@@ -16,6 +16,12 @@ import { useMarketContract, useMarketQuery } from "@/hooks/useMarketContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
 import { type Order } from "../orders";
 import { OrderStatus } from "@/lib/contractUtils";
+
+// 选择的规格值类型
+interface SelectedSpecValue {
+  spec_name: string;
+  option_value: string;
+}
 import { ROUTES } from "@/routes";
 import { getFirstImageUrl } from "@/lib/imageUtils";
 import { formatDateTime, formatOrderNumber } from "@/lib/dateUtils";
@@ -513,6 +519,35 @@ export default function OrderDetailPage() {
                 <Text className="text-sm font-medium block mb-1 text-slate-900 truncate">
                   {order.product_name || order.name}
                 </Text>
+                {/* 展示订单规格 */}
+                {(() => {
+                  let specsArray: SelectedSpecValue[] = [];
+                  if (order.specs) {
+                    if (typeof order.specs === "string") {
+                      try {
+                        const parsed = JSON.parse(order.specs);
+                        specsArray = Array.isArray(parsed) ? parsed : [];
+                      } catch {
+                        // 解析失败，忽略
+                      }
+                    } else if (Array.isArray(order.specs)) {
+                      specsArray = order.specs;
+                    }
+                  }
+                  return specsArray.length > 0 ? (
+                    <div className="mt-1 space-y-0.5 mb-2">
+                      {specsArray.map((spec, index) => (
+                        <div
+                          key={index}
+                          className="text-xs text-slate-500 flex items-center gap-1"
+                        >
+                          <span className="text-slate-400">{spec.spec_name}:</span>
+                          <span className="text-slate-600">{spec.option_value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null;
+                })()}
                 <div className="flex items-center justify-between mt-2">
                   <Text className="text-base font-semibold text-slate-900">
                     ${order.price}

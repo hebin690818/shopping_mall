@@ -291,6 +291,7 @@
     "description": "Product Description",
     "descriptionPlaceholder": "Enter description copy..",
     "images": "Product Images",
+    "detailImages": "Detail Images",
     "uploadClick": "Click to Upload",
     "uploading": "Uploading...",
     "uploadTip": "Supports JPG, PNG format, recommended size 800x800",
@@ -421,7 +422,8 @@
     "deliveryTime": "Estimated 2-3 working days delivery",
     "deliveryFast": "Fast shipping available",
     "buyNow": "Buy Now",
-    "connectWallet": "Connect Wallet"
+    "connectWallet": "Connect Wallet",
+    "detailImagesTitle": "Product Detail Images"
   },
   "merchantStore": {
     "title": "Merchant Store",

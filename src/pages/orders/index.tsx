@@ -23,6 +23,12 @@ const { Text, Title } = Typography;
 
 export type OrderStatus = "pending" | "delivering" | "completed";
 
+// 选择的规格值类型
+interface SelectedSpecValue {
+  spec_name: string;
+  option_value: string;
+}
+
 export type Order = {
   id: string;
   orderNumber: string;
@@ -54,6 +60,7 @@ export type Order = {
   buyer_full_address?: string; // 买家地址
   return_shipping_company?: string; // 退货物流公司
   return_tracking_number?: string; // 退货物流单号
+  specs?: SelectedSpecValue[] | string; // 商品规格（可能是数组或JSON字符串）
 };
 
 // 将API订单状态映射到前端订单状态
@@ -80,6 +87,24 @@ const mapApiStatusToOrderStatus = (apiStatus: OrderStatusAPI): OrderStatus => {
 
 // 将API订单数据转换为前端订单格式
 const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
+  // 处理规格信息：可能是字符串（JSON）或数组
+  // 支持 specs 和 selected_specs 两种字段名
+  let specs: SelectedSpecValue[] | string | undefined = undefined;
+  const specsData = (apiOrder as any).specs || (apiOrder as any).selected_specs;
+  
+  if (specsData) {
+    if (typeof specsData === "string") {
+      try {
+        const parsed = JSON.parse(specsData);
+        specs = Array.isArray(parsed) ? parsed : specsData;
+      } catch {
+        specs = specsData;
+      }
+    } else if (Array.isArray(specsData)) {
+      specs = specsData;
+    }
+  }
+
   return {
     id: String(apiOrder.id || ""),
     orderNumber: apiOrder.order_no || `ORD-${apiOrder.id}`,
@@ -115,6 +140,7 @@ const mapApiOrderToOrder = (apiOrder: OrderAPI): Order => {
     buyer_full_address: apiOrder.buyer_full_address,
     return_shipping_company: apiOrder.return_shipping_company,
     return_tracking_number: apiOrder.return_tracking_number,
+    specs,
   };
 };
 
@@ -753,9 +779,36 @@ export default function OrdersPage() {
                         <Text className="text-sm font-medium block mb-1 truncate">
                           {order.product_name || order.name}
                         </Text>
-                        <Text className="text-xs text-slate-500 block mb-1">
-                          {order.store}
-                        </Text>
+                        {/* 展示订单规格 */}
+                        {(() => {
+                          let specsArray: SelectedSpecValue[] = [];
+                          if (order.specs) {
+                            if (typeof order.specs === "string") {
+                              try {
+                                const parsed = JSON.parse(order.specs);
+                                specsArray = Array.isArray(parsed) ? parsed : [];
+                              } catch {
+                                // 解析失败，忽略
+                              }
+                            } else if (Array.isArray(order.specs)) {
+                              specsArray = order.specs;
+                            }
+                          }
+                          return specsArray.length > 0 ? (
+                            <div className="mt-1 space-y-0.5 mb-1">
+                              {specsArray.map((spec, index) => (
+                                <div
+                                  key={index}
+                                  className="text-xs text-slate-500 flex items-center gap-1"
+                                >
+                                  <span className="text-slate-400">{spec.spec_name}:</span>
+                                  <span className="text-slate-600">{spec.option_value}</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : null;
+                        })()}
+                        
                         <div className="flex items-center justify-between">
                           <Text className="text-base font-semibold text-slate-900">
                             ${order.price}

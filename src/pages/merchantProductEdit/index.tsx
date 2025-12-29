@@ -34,12 +34,17 @@ export default function MerchantProductEditPage() {
   const { t } = useTranslation("common");
   const [categories, setCategories] = useState<Category[]>([]);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [uploading, setUploading] = useState(false);
+  const [detailImagesUrls, setDetailImagesUrls] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const [uploadingDetailImages, setUploadingDetailImages] = useState(false);
   const [fileList, setFileList] = useState<UploadFile[]>([]);
+  const [detailImagesFileList, setDetailImagesFileList] = useState<UploadFile[]>([]);
   const [selectOpen, setSelectOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [product, setProduct] = useState<Product | null>(null);
   const pendingFilesRef = useRef<File[]>([]);
+  const pendingDetailFilesRef = useRef<File[]>([]);
   const [specifications, setSpecifications] = useState<Specification[]>([]);
 
   // 判断是新增还是编辑模式
@@ -77,7 +82,9 @@ export default function MerchantProductEditPage() {
       // 新增模式：重置表单为空
       form.resetFields();
       setImageUrls([]);
+      setDetailImagesUrls([]);
       setFileList([]);
+      setDetailImagesFileList([]);
       setProduct(null);
       setSpecifications([]);
       return;
@@ -131,6 +138,42 @@ export default function MerchantProductEditPage() {
           setImageUrls([]);
           setFileList([]);
         }
+
+        // 设置详情图片（支持数组或逗号分隔的字符串）
+        const detailImagesData = (productData as any).detail_images;
+        let detailUrls: string[] = [];
+        if (detailImagesData) {
+          if (Array.isArray(detailImagesData)) {
+            // 如果是数组，直接使用
+            detailUrls = detailImagesData.filter((url: any) => url && String(url).trim());
+          } else if (typeof detailImagesData === "string") {
+            // 如果是字符串，尝试解析为数组或按逗号分割
+            try {
+              const parsed = JSON.parse(detailImagesData);
+              if (Array.isArray(parsed)) {
+                detailUrls = parsed.filter((url: any) => url && String(url).trim());
+              } else {
+                detailUrls = detailImagesData
+                  .split(",")
+                  .filter((url: string) => url.trim());
+              }
+            } catch {
+              // 解析失败，按逗号分割
+              detailUrls = detailImagesData
+                .split(",")
+                .filter((url: string) => url.trim());
+            }
+          }
+        }
+        setDetailImagesUrls(detailUrls);
+        setDetailImagesFileList(
+          detailUrls.map((url: string, index: number) => ({
+            uid: `detail-${index + 1}`,
+            name: `detail-image-${index + 1}`,
+            status: "done" as const,
+            url: url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`,
+          }))
+        );
 
         // 设置规格数据
         let specsData: Specification[] = [];
@@ -200,7 +243,7 @@ export default function MerchantProductEditPage() {
       message.warning(`最多只能上传${remainingSlots}张图片`);
     }
 
-    setUploading(true);
+    setUploadingImages(true);
     try {
       const uploadPromises = filesToUpload.map((file) => api.uploadImage(file));
       const results = await Promise.all(uploadPromises);
@@ -225,7 +268,7 @@ export default function MerchantProductEditPage() {
     } catch (error: any) {
       message.error(error.message || t("merchantEdit.imageUploadFailed"));
     } finally {
-      setUploading(false);
+      setUploadingImages(false);
     }
   };
 
@@ -237,6 +280,64 @@ export default function MerchantProductEditPage() {
       updatedUrls.map((url, i) => ({
         uid: `-${i + 1}`,
         name: `product-image-${i + 1}`,
+        status: "done" as const,
+        url: url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`,
+      }))
+    );
+  };
+
+  // 处理批量详情图片上传
+  const handleBatchDetailImageUpload = async (files: File[]) => {
+    // 检查总数量是否超过限制
+    const remainingSlots = 9 - detailImagesUrls.length;
+    if (remainingSlots <= 0) {
+      message.error(t("merchantEdit.maxImagesLimit"));
+      return;
+    }
+
+    // 只处理剩余可上传的数量
+    const filesToUpload = files.slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      message.warning(`最多只能上传${remainingSlots}张详情图片`);
+    }
+
+    setUploadingDetailImages(true);
+    try {
+      const uploadPromises = filesToUpload.map((file) => api.uploadImage(file));
+      const results = await Promise.all(uploadPromises);
+      
+      const newUrls = results.map((result) => result.url);
+      const updatedUrls = [...detailImagesUrls, ...newUrls];
+      setDetailImagesUrls(updatedUrls);
+
+      setDetailImagesFileList(
+        updatedUrls.map((url, index) => ({
+          uid: `detail-${index + 1}`,
+          name: `detail-image-${index + 1}`,
+          status: "done" as const,
+          url: url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`,
+        }))
+      );
+      
+      const successMessage = filesToUpload.length > 1 
+        ? `${t("merchantEdit.imageUploadSuccess")} (${filesToUpload.length}张)`
+        : t("merchantEdit.imageUploadSuccess");
+      message.success(successMessage);
+    } catch (error: any) {
+      message.error(error.message || t("merchantEdit.imageUploadFailed"));
+    } finally {
+      setUploadingDetailImages(false);
+    }
+  };
+
+  // 处理详情图片删除
+  const handleDetailImageRemove = (index: number) => {
+    const updatedUrls = detailImagesUrls.filter((_, i) => i !== index);
+    setDetailImagesUrls(updatedUrls);
+    setDetailImagesFileList(
+      updatedUrls.map((url, i) => ({
+        uid: `detail-${i + 1}`,
+        name: `detail-image-${i + 1}`,
         status: "done" as const,
         url: url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`,
       }))
@@ -334,7 +435,7 @@ export default function MerchantProductEditPage() {
     }
 
     try {
-      setUploading(true);
+      setSubmitting(true);
 
       if (isEditMode && id) {
         // 编辑模式：更新商品
@@ -354,6 +455,7 @@ export default function MerchantProductEditPage() {
 
         // 将图片URL数组用逗号连接
         const imageUrlString = imageUrls.join(",");
+        // 详情图片作为数组传递
         // 过滤掉空的规格和选项
         const validSpecs = specifications
           .map((spec) => ({
@@ -371,6 +473,7 @@ export default function MerchantProductEditPage() {
           category_id: values.category_id,
           description: values.description || "",
           image_url: imageUrlString,
+          detail_images: detailImagesUrls.length > 0 ? detailImagesUrls : undefined,
           name: values.name,
           price: Number(values.price),
           status: statusToUpdate,
@@ -385,6 +488,12 @@ export default function MerchantProductEditPage() {
             return url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`;
           })
           .join(",");
+        // 详情图片作为数组传递，处理URL前缀
+        const processedDetailImages = detailImagesUrls
+          .map((url) => {
+            // 如果已经是完整URL，直接返回；否则拼接API_BASE_URL_IMAGE
+            return url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`;
+          });
         // 过滤掉空的规格和选项
         const validSpecs = specifications
           .map((spec) => ({
@@ -401,6 +510,7 @@ export default function MerchantProductEditPage() {
           category_id: values.category_id,
           description: values.description || "",
           image_url: imageUrlString,
+          detail_images: processedDetailImages.length > 0 ? processedDetailImages : undefined,
           name: values.name,
           price: Number(values.price),
           specifications: validSpecs.length > 0 ? validSpecs : undefined,
@@ -419,7 +529,7 @@ export default function MerchantProductEditPage() {
             : t("merchantEdit.productCreateFailed"))
       );
     } finally {
-      setUploading(false);
+      setSubmitting(false);
     }
   };
 
@@ -610,7 +720,119 @@ export default function MerchantProductEditPage() {
                         className="upload-wrapper"
                       >
                         <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-all duration-200 cursor-pointer group">
-                          {uploading ? (
+                          {uploadingImages ? (
+                            <>
+                              <div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mb-2" />
+                              <span className="text-xs text-slate-500">
+                                {t("merchantEdit.uploading")}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-10 h-10 rounded-full bg-slate-200 group-hover:bg-slate-300 flex items-center justify-center transition-colors duration-200">
+                                <PlusOutlined className="text-lg text-slate-500 group-hover:text-slate-600" />
+                              </div>
+                            </>
+                          )}
+                        </div>
+                      </Upload>
+                    )}
+                  </div>
+                </div>
+
+                {/* 详情图片 */}
+                <div className="mt-4 pt-4 border-t border-slate-200 space-y-2">
+                  <Text className="text-sm text-slate-900">
+                    {t("merchantEdit.detailImages") || "详情图片"} ({detailImagesUrls.length}/9)
+                  </Text>
+                  <div className="flex gap-3 flex-wrap">
+                    {/* 显示已上传的详情图片 */}
+                    {detailImagesUrls.map((url, index) => (
+                      <div key={index} className="relative group">
+                        <div className="w-20 h-20 rounded-xl overflow-hidden bg-slate-100 border border-slate-200 shadow-sm">
+                          <img
+                            src={
+                              url.startsWith("http")
+                                ? url
+                                : `${API_BASE_URL_IMAGE}${url}`
+                            }
+                            alt={`${t("merchantEdit.detailImages") || "详情图片"} ${index + 1}`}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleDetailImageRemove(index)}
+                          className="absolute -top-2 -right-2 w-6 h-6 rounded-full bg-red-500 text-white flex items-center justify-center shadow-md hover:bg-red-600 transition-colors duration-200 z-10"
+                          aria-label={t("ariaLabels.deleteImage")}
+                        >
+                          <CloseCircleFilled className="text-xs" />
+                        </button>
+                        {/* 悬停遮罩 */}
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-xl pointer-events-none" />
+                      </div>
+                    ))}
+                    {/* 上传按钮（最多9张） */}
+                    {detailImagesUrls.length < 9 && (
+                      <Upload
+                        multiple
+                        beforeUpload={(file) => {
+                          // 检查文件类型（只允许 jpg, png, jpeg, gif, webp）
+                          const allowedTypes = [
+                            "image/jpeg",
+                            "image/jpg",
+                            "image/png",
+                            "image/gif",
+                            "image/webp",
+                          ];
+                          const fileExtension = file.name
+                            .split(".")
+                            .pop()
+                            ?.toLowerCase();
+                          const allowedExtensions = [
+                            "jpg",
+                            "jpeg",
+                            "png",
+                            "gif",
+                            "webp",
+                          ];
+
+                          if (
+                            !allowedTypes.includes(file.type) &&
+                            !allowedExtensions.includes(fileExtension || "")
+                          ) {
+                            message.error(t("merchantEdit.imageFormatLimit"));
+                            return false;
+                          }
+
+                          // 检查文件大小（5MB = 5 * 1024 * 1024 字节）
+                          const maxSize = 5 * 1024 * 1024; // 5MB
+                          if (file.size > maxSize) {
+                            message.error(t("merchantEdit.imageSizeLimit"));
+                            return false;
+                          }
+
+                          // 将文件添加到待上传列表
+                          pendingDetailFilesRef.current.push(file);
+                          return false; // 阻止默认上传
+                        }}
+                        onChange={() => {
+                          // 当文件选择完成时，批量上传所有待上传的文件
+                          if (pendingDetailFilesRef.current.length > 0) {
+                            const filesToUpload = [...pendingDetailFilesRef.current];
+                            pendingDetailFilesRef.current = [];
+                            handleBatchDetailImageUpload(filesToUpload);
+                          }
+                        }}
+                        fileList={detailImagesFileList}
+                        listType="picture-card"
+                        maxCount={9}
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        showUploadList={false}
+                        className="upload-wrapper"
+                      >
+                        <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-slate-400 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-all duration-200 cursor-pointer group">
+                          {uploadingDetailImages ? (
                             <>
                               <div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin mb-2" />
                               <span className="text-xs text-slate-500">
@@ -783,7 +1005,7 @@ export default function MerchantProductEditPage() {
           shape="round"
           className="!bg-slate-900 !border-slate-900 h-12"
           onClick={() => form.submit()}
-          loading={uploading}
+          loading={submitting}
         >
           {t("common.save")}
         </Button>

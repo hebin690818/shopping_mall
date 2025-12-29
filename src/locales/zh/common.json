@@ -291,6 +291,7 @@
     "description": "商品描述",
     "descriptionPlaceholder": "输入商品描述文案..",
     "images": "商品图片",
+    "detailImages": "详情图片",
     "uploadClick": "点击上传",
     "uploading": "上传中...",
     "uploadTip": "支持 JPG、PNG 格式，建议尺寸 800x800",
@@ -421,7 +422,8 @@
     "deliveryTime": "预计 2~3 个工作日送达",
     "deliveryFast": "支持极速发货",
     "buyNow": "立即购买",
-    "connectWallet": "链接钱包"
+    "connectWallet": "链接钱包",
+    "detailImagesTitle": "商品详情图片"
   },
   "merchantStore": {
     "title": "商家店铺",

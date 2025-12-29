@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Button, Typography, Carousel } from "antd";
 import { useConnection, useConnect } from "wagmi";
 import { useTranslation } from "react-i18next";
@@ -7,6 +7,7 @@ import { ROUTES } from "@/routes";
 import type { Product } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
 import { getAllImageUrls } from "@/lib/imageUtils";
+import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Title, Paragraph, Text } = Typography;
 
@@ -15,6 +16,12 @@ interface Specification {
   spec_name: string;
   options: string[];
   sort_order: number;
+}
+
+// 选择的规格值类型
+interface SelectedSpecValue {
+  spec_name: string;
+  option_value: string;
 }
 
 export default function ProductDetailPage() {
@@ -40,14 +47,65 @@ export default function ProductDetailPage() {
   const imageUrlString = displayProduct.image_url || displayProduct.image || "";
   const productImages = getAllImageUrls(imageUrlString);
 
+  // 获取详情图片
+  const getDetailImages = (): string[] => {
+    const detailImagesData = (displayProduct as any).detail_images;
+    if (!detailImagesData) return [];
+
+    let detailUrls: string[] = [];
+    if (Array.isArray(detailImagesData)) {
+      // 如果是数组，直接使用
+      detailUrls = detailImagesData.filter((url: any) => url && String(url).trim());
+    } else if (typeof detailImagesData === "string") {
+      // 如果是字符串，尝试解析为数组或按逗号分割
+      try {
+        const parsed = JSON.parse(detailImagesData);
+        if (Array.isArray(parsed)) {
+          detailUrls = parsed.filter((url: any) => url && String(url).trim());
+        } else {
+          // 使用 getAllImageUrls 处理逗号分隔的字符串
+          detailUrls = getAllImageUrls(detailImagesData);
+        }
+      } catch {
+        // 解析失败，使用 getAllImageUrls 处理逗号分隔的字符串
+        detailUrls = getAllImageUrls(detailImagesData);
+      }
+    }
+
+    // 处理每个URL，如果是完整URL直接返回，否则拼接API_BASE_URL_IMAGE
+    return detailUrls.map((url) => 
+      url.startsWith("http") ? url : `${API_BASE_URL_IMAGE}${url}`
+    );
+  };
+
+  const detailImages = getDetailImages();
+
   // 获取商品规格
   const specifications: Specification[] =
     (displayProduct as any).specifications || [];
 
+  // 默认选择每个规格的第一个选项
+  const defaultSelectedSpecs = useMemo(() => {
+    const defaultSpecs: Record<number, number> = {};
+    specifications
+      .sort((a, b) => a.sort_order - b.sort_order)
+      .forEach((spec, specIndex) => {
+        if (spec.options.length > 0) {
+          defaultSpecs[specIndex] = 0; // 默认选择第一个选项
+        }
+      });
+    return defaultSpecs;
+  }, [specifications]);
+
   // 管理每个规格的选中状态：{ specIndex: optionIndex }
   const [selectedSpecs, setSelectedSpecs] = useState<Record<number, number>>(
-    {}
+    defaultSelectedSpecs
   );
+
+  // 当规格变化时，更新默认选择
+  useEffect(() => {
+    setSelectedSpecs(defaultSelectedSpecs);
+  }, [defaultSelectedSpecs]);
 
   // 处理规格选项选择（单选：点击已选中的会取消选择）
   const handleSpecOptionClick = (specIndex: number, optionIndex: number) => {
@@ -70,16 +128,49 @@ export default function ProductDetailPage() {
   const isConnecting = status === "pending";
   const canConnect = connectors.length > 0;
 
+  // 将选择的规格转换为数组格式
+  const getSelectedSpecsArray = (): SelectedSpecValue[] => {
+    const sortedSpecs = specifications.sort(
+      (a, b) => a.sort_order - b.sort_order
+    );
+    return sortedSpecs
+      .map((spec, specIndex) => {
+        const selectedOptionIndex = selectedSpecs[specIndex];
+        if (
+          selectedOptionIndex !== undefined &&
+          spec.options[selectedOptionIndex]
+        ) {
+          return {
+            spec_name: spec.spec_name,
+            option_value: spec.options[selectedOptionIndex],
+          };
+        }
+        return null;
+      })
+      .filter((spec): spec is SelectedSpecValue => spec !== null);
+  };
+
   const handlePrimaryAction = () => {
     if (!isConnected) {
       if (canConnect) {
-        connect({ connector: connectors[0] });
+        // 优先选择 OKX 钱包（如果可用）
+        const okxConnector = connectors.find(
+          (c) => c.id === 'okx' || c.name?.toLowerCase().includes('okx')
+        );
+        const connectorToUse = okxConnector || connectors[0];
+        connect({ connector: connectorToUse });
       }
       return;
     }
 
+    // 获取选择的规格
+    const selectedSpecsArray = getSelectedSpecsArray();
+
     navigate(ROUTES.ORDER_CONFIRM.replace(":productId", displayProduct.id), {
-      state: { product: displayProduct },
+      state: {
+        product: displayProduct,
+        selectedSpecs: selectedSpecsArray,
+      },
     });
   };
 
@@ -210,6 +301,30 @@ export default function ProductDetailPage() {
               <li>{t("productDetail.deliveryFast")}</li>
             </ul>
           </div>
+
+          {/* 详情图片 */}
+          {detailImages.length > 0 && (
+            <div className="bg-white rounded-lg p-4 shadow-sm space-y-3">
+              <Title level={5} className="!mb-1">
+                {t("productDetail.detailImagesTitle") || "商品详情图片"}
+              </Title>
+              <div className="space-y-3">
+                {detailImages.map((imageUrl, index) => (
+                  <div
+                    key={index}
+                    className="rounded-lg overflow-hidden bg-slate-50"
+                  >
+                    <img
+                      src={imageUrl}
+                      alt={`${displayProduct.name} - 详情 ${index + 1}`}
+                      className="w-full h-auto object-contain"
+                      loading="lazy"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           {error && (
             <Text className="text-xs text-red-500 block px-1">

@@ -357,7 +357,12 @@ export default function HomePage({}: HomePageProps) {
           <button
             onClick={() => {
               if (!isConnected && connectors.length > 0) {
-                connect({ connector: connectors[0] });
+                // 优先选择 OKX 钱包（如果可用）
+                const okxConnector = connectors.find(
+                  (c) => c.id === 'okx' || c.name?.toLowerCase().includes('okx')
+                );
+                const connectorToUse = okxConnector || connectors[0];
+                connect({ connector: connectorToUse });
               }
             }}
             disabled={
