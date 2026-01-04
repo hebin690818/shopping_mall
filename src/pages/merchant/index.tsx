@@ -304,7 +304,7 @@ export default function MerchantPage() {
                     >
                       <div className="w-16 h-16 rounded-2xl overflow-hidden bg-slate-100">
                         <img
-                          src={getFirstImageUrl(item.cover || item.image_url) || product}
+                          src={getFirstImageUrl(item.avatar) || product}
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />
