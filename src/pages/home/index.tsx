@@ -359,7 +359,7 @@ export default function HomePage({}: HomePageProps) {
               if (!isConnected && connectors.length > 0) {
                 // 优先选择 OKX 钱包（如果可用）
                 const okxConnector = connectors.find(
-                  (c) => c.id === 'okx' || c.name?.toLowerCase().includes('okx')
+                  (c) => c.id === "okx" || c.name?.toLowerCase().includes("okx")
                 );
                 const connectorToUse = okxConnector || connectors[0];
                 connect({ connector: connectorToUse });
@@ -543,7 +543,9 @@ export default function HomePage({}: HomePageProps) {
                   <div>
                     <div className="w-full aspect-square rounded-lg overflow-hidden bg-slate-100">
                       <img
-                        src={getFirstImageUrl(product.image_url || product.image)}
+                        src={getFirstImageUrl(
+                          product.image_url || product.image
+                        )}
                         alt={product.name}
                         className="w-full h-full object-cover"
                       />

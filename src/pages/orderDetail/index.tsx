@@ -464,6 +464,33 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handleCopyBuyerName = async () => {
+    const success = await copyToClipboard(order.buyer_name || "");
+    if (success) {
+      message.success(t("profile.copy"));
+    } else {
+      message.error(t("messages.copyFailed"));
+    }
+  };
+
+  const handleCopyBuyerPhone = async () => {
+    const success = await copyToClipboard(order.buyer_phone || "");
+    if (success) {
+      message.success(t("profile.copy"));
+    } else {
+      message.error(t("messages.copyFailed"));
+    }
+  };
+
+  const handleCopyBuyerAddress = async () => {
+    const success = await copyToClipboard(order.buyer_full_address || "");
+    if (success) {
+      message.success(t("profile.copy"));
+    } else {
+      message.error(t("messages.copyFailed"));
+    }
+  };
+
   return (
     <div className="min-h-screen pb-20">
       {/* Fixed Header */}
@@ -621,8 +648,16 @@ export default function OrderDetailPage() {
                     <Text className="text-sm text-slate-600">
                       {t("orderDetail.buyerName")}
                     </Text>
-                    <Text className="text-sm text-slate-900">
-                      {order.buyer_name}
+                    <Text className="text-sm text-slate-900 flex items-center gap-1">
+                      {order.buyer_name}{" "}
+                      <button
+                        type="button"
+                        onClick={handleCopyBuyerName}
+                        className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                        aria-label={t("ariaLabels.copyAddress")}
+                      >
+                        <CopyOutlined className="text-xs" />
+                      </button>
                     </Text>
                   </div>
                 )}
@@ -631,8 +666,16 @@ export default function OrderDetailPage() {
                     <Text className="text-sm text-slate-600">
                       {t("orderDetail.buyerPhone")}
                     </Text>
-                    <Text className="text-sm text-slate-900">
-                      {order.buyer_phone}
+                    <Text className="text-sm text-slate-900 flex items-center gap-1">
+                      {order.buyer_phone}{" "}
+                      <button
+                        type="button"
+                        onClick={handleCopyBuyerPhone}
+                        className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors"
+                        aria-label={t("ariaLabels.copyAddress")}
+                      >
+                        <CopyOutlined className="text-xs" />
+                      </button>
                     </Text>
                   </div>
                 )}
@@ -641,9 +684,19 @@ export default function OrderDetailPage() {
                     <Text className="text-sm text-slate-600 flex-shrink-0">
                       {t("orderDetail.buyerAddress")}
                     </Text>
-                    <Text className="text-sm text-slate-900 flex-1 text-right ml-4">
-                      {order.buyer_full_address}
-                    </Text>
+                    <div className="flex-1 ml-4 flex items-start gap-1 justify-end">
+                      <Text className="text-sm text-slate-900 text-right flex-1">
+                        {order.buyer_full_address}
+                      </Text>
+                      <button
+                        type="button"
+                        onClick={handleCopyBuyerAddress}
+                        className="w-5 h-5 flex items-center justify-center text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0 mt-0.5"
+                        aria-label={t("ariaLabels.copyAddress")}
+                      >
+                        <CopyOutlined className="text-xs" />
+                      </button>
+                    </div>
                   </div>
                 )}
                 {order.updated_at && (

@@ -982,6 +982,23 @@ export const api = {
     return null;
   },
 
+  // 更新当前登录用户的商家信息
+  async updateMyMerchant(params: {
+    name: string;
+    phone: string;
+    avatar?: string;
+  }): Promise<void> {
+    const response = await request<void>("/shop/api/merchants/my", {
+      method: "POST",
+      body: JSON.stringify(params),
+    });
+    if (response.code !== 0 && response.code !== undefined) {
+      throw new Error(response.message || "更新商家信息失败");
+    }
+    // 清除商家信息缓存
+    apiCache.clear("GET:/shop/api/merchants/my");
+  },
+
   // 获取买家订单列表
   async getBuyerOrders(
     params: GetBuyerOrdersParams & { force?: boolean }

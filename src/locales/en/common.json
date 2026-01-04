@@ -147,7 +147,10 @@
     "updateSuccess": "Updated successfully",
     "updateFailed": "Failed to update, please try again",
     "merchantAddressIsSelf": "You cannot buy your own product",
-    "shippingAddressRequired": "Please add a shipping address first"
+    "shippingAddressRequired": "Please add a shipping address first",
+    "merchantNotFound": "Merchant information not found",
+    "saveSuccess": "Saved successfully",
+    "saveFailed": "Failed to save"
   },
   "loading": {
     "confirmingReceipt": "Confirming receipt...",
@@ -170,6 +173,8 @@
     "nameLabel": "Store Name",
     "nameRequired": "Please enter your store name",
     "namePlaceholder": "Please enter your store name",
+    "avatarLabel": "Store Avatar",
+    "avatarTip": "Supports JPG, PNG format, recommended size 200x200",
     "descLabel": "Store Description",
     "descPlaceholder": "Please enter your store description",
     "phoneNumber": "Phone Number",

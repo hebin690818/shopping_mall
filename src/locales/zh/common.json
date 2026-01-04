@@ -147,7 +147,10 @@
     "updateSuccess": "更新成功",
     "updateFailed": "更新失败，请重试",
     "merchantAddressIsSelf": "不能购买自己的商品",
-    "shippingAddressRequired": "请先添加收货地址"
+    "shippingAddressRequired": "请先添加收货地址",
+    "merchantNotFound": "商家信息不存在",
+    "saveSuccess": "保存成功",
+    "saveFailed": "保存失败"
   },
   "loading": {
     "confirmingReceipt": "正在确认收货...",
@@ -170,6 +173,8 @@
     "nameLabel": "店铺名称",
     "nameRequired": "请输入您的店铺名称",
     "namePlaceholder": "请输入您的店铺名称",
+    "avatarLabel": "店铺头像",
+    "avatarTip": "支持 JPG、PNG 格式，建议尺寸 200x200",
     "descLabel": "店铺描述",
     "descPlaceholder": "请输入您的店铺描述",
     "phoneNumber": "电话号码",

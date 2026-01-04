@@ -1,4 +1,5 @@
-import { Button, Form, Input, Typography, message } from "antd";
+import { Button, Form, Input, Typography, message, Upload } from "antd";
+import { PlusOutlined } from "@ant-design/icons";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import { useConnection } from "wagmi";
@@ -7,13 +8,14 @@ import { ROUTES } from "@/routes";
 import { useMarketContract, useMarketQuery } from "@/hooks/useMarketContract";
 import { useTokenContract, useTokenQuery } from "@/hooks/useTokenContract";
 import { useGlobalLoading } from "@/contexts/LoadingProvider";
-import { MARKET_CONTRACT_ADDRESS } from "@/lib/config";
+import { MARKET_CONTRACT_ADDRESS, API_BASE_URL_IMAGE } from "@/lib/config";
 import {
   phoneToBigInt,
   needsApproval,
   parseTokenAmount,
   formatTokenAmount,
 } from "@/lib/contractUtils";
+import { api } from "@/lib/api";
 import backSvg from "@/assets/back.svg";
 
 const { Title, Text } = Typography;
@@ -25,6 +27,8 @@ export default function MerchantApplyPage() {
   const { address, isConnected } = useConnection();
   const { showLoading, hideLoading } = useGlobalLoading();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const { registerMerchant } = useMarketContract();
   const { approve } = useTokenContract();
@@ -33,6 +37,52 @@ export default function MerchantApplyPage() {
 
   const { data: merchantFee } = useMerchantFee();
   const { data: allowance } = useAllowance(address, MARKET_CONTRACT_ADDRESS);
+
+  // 处理头像上传
+  const handleAvatarUpload = async (file: File) => {
+    // 检查文件类型
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+    const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
+
+    if (
+      !allowedTypes.includes(file.type) &&
+      !allowedExtensions.includes(fileExtension || "")
+    ) {
+      message.error(
+        t("merchantEdit.imageFormatLimit") ||
+          "图片格式只能是 JPG、PNG、JPEG、GIF、WEBP"
+      );
+      return false;
+    }
+
+    // 检查文件大小（5MB）
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      message.error(t("merchantEdit.imageSizeLimit") || "图片大小不能超过5M");
+      return false;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      const result = await api.uploadImage(file);
+      setAvatarUrl(result.url);
+      message.success(t("messages.uploadSuccess") || "上传成功");
+    } catch (error: any) {
+      console.error("上传头像失败:", error);
+      message.error(error.message || t("messages.uploadFailed") || "上传失败");
+    } finally {
+      setUploadingAvatar(false);
+    }
+
+    return false; // 阻止默认上传
+  };
 
   const handleFinish = async (values: {
     name: string;
@@ -98,12 +148,29 @@ export default function MerchantApplyPage() {
 
       // 4. 检查交易状态
       if (receipt.status === "success") {
+        // 延迟 1500ms 后执行，确保链上交易已确认
+        setTimeout(async () => {
+          try {
+            await api.updateMyMerchant({
+              name: values.name,
+              phone: values.phoneNumber || "",
+              avatar: avatarUrl.startsWith("http")
+                ? avatarUrl
+                : `${API_BASE_URL_IMAGE}${avatarUrl}`,
+            });
+          } catch (error: any) {
+            // 静默处理错误，不影响用户体验
+            console.error("更新商家信息失败（不影响主流程）:", error);
+          }
+        }, 1500);
+
+        // 延迟执行主流程，确保在跳转前启动 API 调用
         setTimeout(() => {
           hideLoading();
           setIsSubmitting(false);
           message.success(t("messages.registerSuccess"));
           navigate(ROUTES.MERCHANT_APPLY_RESULT.replace(":status", "success"));
-        }, 1500);
+        }, 2000);
       } else {
         throw new Error(t("messages.transactionFailed"));
       }
@@ -159,6 +226,48 @@ export default function MerchantApplyPage() {
               onFinish={handleFinish}
               requiredMark="optional"
             >
+              {/* 头像上传 */}
+              <Form.Item
+                label={
+                  <span className="text-sm text-slate-900">
+                    {t("merchantApply.avatarLabel") || "店铺头像"}
+                  </span>
+                }
+                name="avatar"
+              >
+                <div className="flex items-center gap-4">
+                  <Upload
+                    beforeUpload={handleAvatarUpload}
+                    showUploadList={false}
+                    accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                  >
+                    <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-all duration-200 cursor-pointer">
+                      {uploadingAvatar ? (
+                        <div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                      ) : avatarUrl ? (
+                        <img
+                          src={
+                            avatarUrl.startsWith("http")
+                              ? avatarUrl
+                              : `${API_BASE_URL_IMAGE}${avatarUrl}`
+                          }
+                          alt="店铺头像"
+                          className="w-full h-full object-cover rounded-xl"
+                        />
+                      ) : (
+                        <PlusOutlined className="text-2xl" />
+                      )}
+                    </div>
+                  </Upload>
+                  <Text className="text-xs text-slate-500">
+                    {t("merchantApply.avatarTip") ||
+                      "支持 JPG、PNG 格式，建议尺寸 200x200"}
+                  </Text>
+                </div>
+              </Form.Item>
+
+              <div className="h-px bg-slate-100" />
+
               <Form.Item
                 label={
                   <span className="text-sm text-slate-900">

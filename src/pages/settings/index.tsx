@@ -1,5 +1,5 @@
-import { Card, Typography, Form, Input, message } from "antd";
-import { CopyOutlined } from "@ant-design/icons";
+import { Card, Typography, Form, Input, message, Upload, Button } from "antd";
+import { CopyOutlined, PlusOutlined } from "@ant-design/icons";
 import { useConnection } from "wagmi";
 import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,7 @@ import i18n from "@/i18n/config";
 import backSvg from "@/assets/back.svg";
 import { api, type MerchantDetail, type Address } from "@/lib/api";
 import { copyToClipboard } from "@/lib/clipboardUtils";
+import { API_BASE_URL_IMAGE } from "@/lib/config";
 
 const { Title, Text } = Typography;
 
@@ -25,6 +26,9 @@ export default function SettingsPage() {
     null
   );
   const [defaultAddress, setDefaultAddress] = useState<Address | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string>("");
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const formatAddress = (addr: string | undefined) => {
     if (!addr) return "";
@@ -43,21 +47,32 @@ export default function SettingsPage() {
   }, []);
 
   const loadMerchantInfo = async () => {
-    const detail = await api.getMyMerchant();
+    const detail = await api.getMyMerchant({ force: true });
     console.log("获取到的商家详情:", detail);
     if (detail) {
       // 先设置状态，让表单渲染
       setMerchantDetail(detail);
       setIsMerchant(true);
+      // 设置头像 URL
+      if (detail.avatar) {
+        setAvatarUrl(detail.avatar);
+      }
     } else {
       setIsMerchant(false);
       setMerchantDetail(null);
+      setAvatarUrl("");
     }
   };
 
   // 当表单渲染后，设置表单值
   useEffect(() => {
     if (merchantDetail && isMerchant) {
+      // 更新头像 URL
+      if (merchantDetail.avatar) {
+        setAvatarUrl(merchantDetail.avatar);
+      } else {
+        setAvatarUrl("");
+      }
       // 使用 requestAnimationFrame 确保表单已经完全渲染
       requestAnimationFrame(() => {
         const formValues = {
@@ -81,16 +96,85 @@ export default function SettingsPage() {
     setDefaultAddress(addressList.length > 0 ? addressList[0] : null);
   };
 
-  const handleFinish = (values: { name: string; phone?: string }) => {
-    showLoading(t("globalLoading.defaultMessage"));
-    if (loadingTimerRef.current) {
-      clearTimeout(loadingTimerRef.current);
+  // 处理头像上传
+  const handleAvatarUpload = async (file: File) => {
+    // 检查文件类型
+    const allowedTypes = [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/gif",
+      "image/webp",
+    ];
+    const fileExtension = file.name.split(".").pop()?.toLowerCase();
+    const allowedExtensions = ["jpg", "jpeg", "png", "gif", "webp"];
+
+    if (
+      !allowedTypes.includes(file.type) &&
+      !allowedExtensions.includes(fileExtension || "")
+    ) {
+      message.error(t("merchantEdit.imageFormatLimit"));
+      return false;
     }
-    loadingTimerRef.current = setTimeout(() => {
+
+    // 检查文件大小（5MB）
+    const maxSize = 5 * 1024 * 1024;
+    if (file.size > maxSize) {
+      message.error(t("merchantEdit.imageSizeLimit"));
+      return false;
+    }
+
+    try {
+      setUploadingAvatar(true);
+      const result = await api.uploadImage(file);
+      setAvatarUrl(result.url);
+      message.success(t("messages.uploadSuccess"));
+    } catch (error: any) {
+      console.error("上传头像失败:", error);
+      message.error(error.message || t("messages.uploadFailed"));
+    } finally {
+      setUploadingAvatar(false);
+    }
+
+    return false; // 阻止默认上传
+  };
+
+  const handleFinish = async (values: { name: string; phone?: string }) => {
+    if (isSubmitting) {
+      return;
+    }
+
+    if (!merchantDetail) {
+      message.error(t("messages.merchantNotFound"));
+      return;
+    }
+
+    setIsSubmitting(true);
+    showLoading(t("globalLoading.defaultMessage"));
+
+    try {
+      await api.updateMyMerchant({
+        name: values.name,
+        phone: values.phone || "",
+        avatar: avatarUrl.startsWith("http")
+          ? avatarUrl
+          : `${API_BASE_URL_IMAGE}${avatarUrl}`,
+      });
+
+      message.success(t("messages.saveSuccess"));
+
+      // 重新加载商家信息以获取最新数据
+      await loadMerchantInfo();
+    } catch (error: any) {
+      console.error("保存商家信息失败:", error);
+      message.error(error.message || t("messages.saveFailed"));
+    } finally {
       hideLoading();
-      // 这里可以添加实际的保存商家信息逻辑
-      console.log("保存商家信息:", values);
-    }, 1200);
+      setIsSubmitting(false);
+      if (loadingTimerRef.current) {
+        clearTimeout(loadingTimerRef.current);
+      }
+    }
   };
 
   return (
@@ -257,6 +341,47 @@ export default function SettingsPage() {
                     {t("settings.storeInfo")}
                   </Title>
 
+                  {/* 头像上传 */}
+                  <div className="pt-2 border-t border-slate-100">
+                    <Form.Item
+                      label={
+                        <span className="text-sm text-slate-900">
+                          {t("merchantApply.avatarLabel")}
+                        </span>
+                      }
+                      name="avatar"
+                    >
+                      <div className="flex items-center gap-4">
+                        <Upload
+                          beforeUpload={handleAvatarUpload}
+                          showUploadList={false}
+                          accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        >
+                          <div className="w-20 h-20 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex items-center justify-center text-slate-400 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-500 transition-all duration-200 cursor-pointer">
+                            {uploadingAvatar ? (
+                              <div className="w-8 h-8 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                            ) : avatarUrl ? (
+                              <img
+                                src={
+                                  avatarUrl.startsWith("http")
+                                    ? avatarUrl
+                                    : `${API_BASE_URL_IMAGE}${avatarUrl}`
+                                }
+                                alt={t("merchantApply.avatarLabel")}
+                                className="w-full h-full object-cover rounded-xl"
+                              />
+                            ) : (
+                              <PlusOutlined className="text-2xl" />
+                            )}
+                          </div>
+                        </Upload>
+                        <Text className="text-xs text-slate-500">
+                          {t("merchantApply.avatarTip")}
+                        </Text>
+                      </div>
+                    </Form.Item>
+                  </div>
+
                   {/* 店铺名称行 */}
                   <div className="pt-2 border-t border-slate-100">
                     <Text className="text-sm font-medium text-slate-900 block mb-2">
@@ -275,7 +400,6 @@ export default function SettingsPage() {
                       <Input
                         placeholder={t("merchantApply.namePlaceholder")}
                         className="!border-0 !border-b !rounded-none !px-0 !pb-3"
-                        readOnly
                       />
                     </Form.Item>
                   </div>
@@ -298,7 +422,7 @@ export default function SettingsPage() {
                       <Input
                         placeholder={t("addressEdit.phonePlaceholder")}
                         className="!border-0 !border-b !rounded-none !px-0 !pb-3"
-                        readOnly
+                        maxLength={11}
                       />
                     </Form.Item>
                   </div>
@@ -308,6 +432,23 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* 底部保存按钮，仅商家显示 */}
+      {isMerchant && merchantDetail && (
+        <div className="fixed left-0 right-0 bottom-0 px-4 pb-6 pt-4 bg-[#f5f5f8]">
+          <Button
+            type="primary"
+            block
+            shape="round"
+            className="!bg-slate-900 !border-slate-900 h-12"
+            onClick={() => form.submit()}
+            loading={isSubmitting}
+            disabled={isSubmitting}
+          >
+            {t("common.save")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
