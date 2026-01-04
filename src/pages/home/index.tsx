@@ -156,7 +156,7 @@ export default function HomePage({}: HomePageProps) {
     const fetchCategories = async () => {
       try {
         setCategoriesLoading(true);
-        const data = await api.getCategories();
+        const data = await api.getCategories({ force: true });
         // 只在组件仍挂载时更新状态
         if (isMounted) {
           setCategories(data);
@@ -196,7 +196,7 @@ export default function HomePage({}: HomePageProps) {
         if (searchKeyword.trim()) {
           params.name = searchKeyword.trim();
         }
-        const response = await api.getProducts(params);
+        const response = await api.getProducts({ force: true, ...params });
         // 只在组件仍挂载时更新状态
         if (isMounted) {
           if (response.data && response.data.length > 0) {
@@ -247,7 +247,7 @@ export default function HomePage({}: HomePageProps) {
       if (searchKeyword.trim()) {
         params.name = searchKeyword.trim();
       }
-      const response = await api.getProducts(params);
+      const response = await api.getProducts({ force: true, ...params });
 
       if (response.data && response.data.length > 0) {
         setProducts((prev) => [...prev, ...response.data]);
